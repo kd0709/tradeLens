@@ -1,65 +1,65 @@
-# ==================== 通用忽略 ====================
-# IDE 配置
-.idea/
-*.iml
-.vscode/
-*.swp
-*.swo
-*~
-
-# 系统文件
-.DS_Store
-Thumbs.db
-
-# 日志
-*.log
-logs/
-log/
-
-# 临时文件
-target/
-build/
-dist/
-temp/
-tmp/
-
-# ==================== 后端 Spring Boot ====================
-backend/target/
-backend/.mvn/
-backend/mvnw
-backend/mvnw.cmd
-
-# Maven wrapper（如果不用可以忽略）
-!.mvn/wrapper/maven-wrapper.jar
-
-# 应用本地配置文件（不要提交个人配置）
-backend/src/main/resources/application-local.yml
-backend/src/main/resources/application-dev.yml
-backend/src/main/resources/application-prod.yml
-backend/src/main/resources/application.yml
-
-# ==================== 前端 Vue3 (Vite) ====================
-frontend/node_modules/
-frontend/dist/
-frontend/.env.local
-frontend/.env.*.local
-
-# Vite 缓存
-frontend/.vite/
-
-# npm/yarn/pnpm 缓存
-frontend/.npm/
-frontend/.yarn-cache/
-frontend/.pnpm-store/
-
-# ==================== 其他可选 ====================
-# Docker
-docker-compose.override.yml
-
-# 打包产物
-*.zip
-*.tar.gz
-
-# 敏感文件（绝对不要提交）
-.env
-.env.local
+## ==================== 通用忽略 ====================
+## IDE 配置
+#.idea/
+#*.iml
+#.vscode/
+#*.swp
+#*.swo
+#*~
+#
+## 系统文件
+#.DS_Store
+#Thumbs.db
+#
+## 日志
+#*.log
+#logs/
+#log/
+#
+## 临时文件
+#target/
+#build/
+#dist/
+#temp/
+#tmp/
+#
+## ==================== 后端 Spring Boot ====================
+#backend/target/
+#backend/.mvn/
+#backend/mvnw
+#backend/mvnw.cmd
+#
+## Maven wrapper（如果不用可以忽略）
+#!.mvn/wrapper/maven-wrapper.jar
+#
+## 应用本地配置文件（不要提交个人配置）
+#backend/src/main/resources/application-local.yml
+#backend/src/main/resources/application-dev.yml
+#backend/src/main/resources/application-prod.yml
+#backend/src/main/resources/application.yml
+#
+## ==================== 前端 Vue3 (Vite) ====================
+#frontend/node_modules/
+#frontend/dist/
+#frontend/.env.local
+#frontend/.env.*.local
+#
+## Vite 缓存
+#frontend/.vite/
+#
+## npm/yarn/pnpm 缓存
+#frontend/.npm/
+#frontend/.yarn-cache/
+#frontend/.pnpm-store/
+#
+## ==================== 其他可选 ====================
+## Docker
+#docker-compose.override.yml
+#
+## 打包产物
+#*.zip
+#*.tar.gz
+#
+## 敏感文件（绝对不要提交）
+#.env
+#.env.local
