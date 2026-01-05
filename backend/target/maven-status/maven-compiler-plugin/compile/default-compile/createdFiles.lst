@@ -1,5 +1,0 @@
-com\cjh\backend\entity\User.class
-com\cjh\backend\BackendApplication.class
-com\cjh\backend\service\impl\UserServiceImpl.class
-com\cjh\backend\service\UserService.class
-com\cjh\backend\mapper\UserMapper.class

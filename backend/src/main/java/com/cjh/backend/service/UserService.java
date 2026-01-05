@@ -1,5 +1,8 @@
 package com.cjh.backend.service;
 
+import com.cjh.backend.dto.LoginRequest;
+import com.cjh.backend.dto.RegisterRequest;
+import com.cjh.backend.dto.UserInfo;
 import com.cjh.backend.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -10,4 +13,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 */
 public interface UserService extends IService<User> {
 
+    void register(RegisterRequest registerRequest);
+
+    UserInfo login(LoginRequest loginRequest);
 }
