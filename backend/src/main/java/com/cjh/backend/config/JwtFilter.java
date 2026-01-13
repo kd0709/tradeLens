@@ -7,10 +7,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
@@ -24,41 +27,69 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // 放行公开接口
+        String method = request.getMethod();
         String path = request.getRequestURI();
+
+        // 放行 OPTIONS 预检请求（CORS）
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
+
+        // 放行公开接口
         if (path.startsWith("/api/auth/") || path.equals("/error")) {
+            System.out.println("放行公开接口");
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 获取 Token
+        // 获取并验证 Token
         String header = request.getHeader("Authorization");
+        System.out.println("Authorization header: " + header);
         if (header == null || !header.startsWith("Bearer ")) {
-            response.setStatus(401);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"code\":0,\"message\":\"未提供 Token\",\"data\":null}");
+            System.out.println("401: 未提供 Token");
+            writeErrorResponse(response, 401, "未提供 Token");
             return;
         }
 
         String token = header.substring(7);
+        System.out.println("Token: " + token.substring(0, Math.min(50, token.length())) + "...");
 
-        // 验证 Token 有效性（签名和过期时间）
-        if (!jwtUtil.validateToken(token) || jwtUtil.isTokenExpired(token)) {
-            response.setStatus(401);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"code\":0,\"message\":\"Token 无效或已过期\",\"data\":null}");
+        if (!jwtUtil.validateToken(token)) {
+            System.out.println("401: Token 验证失败");
+            writeErrorResponse(response, 401, "Token 无效或已过期");
             return;
         }
 
-        // 检查 Token 是否在黑名单中（在放行前检查）
+        if ( jwtUtil.isTokenExpired(token)) {
+            System.out.println("401: Token 已过期");
+            writeErrorResponse(response, 401, "Token 无效或已过期");
+            return;
+        }
+
         if (tokenBlacklist.isBlacklisted(token)) {
-            response.setStatus(401);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"code\":0,\"message\":\"Token 已失效，请重新登录\",\"data\":null}");
+            System.out.println("401: Token 在黑名单中");
+            writeErrorResponse(response, 401, "Token 已失效，请重新登录");
             return;
         }
 
-        // 验证通过，继续执行
+        Long userId = jwtUtil.getUserId(token);
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userId,          // principal
+                        token,
+                        Collections.emptyList()
+                );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
         filterChain.doFilter(request, response);
+    }
+
+    private void writeErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"code\":0,\"message\":\"" + message + "\",\"data\":null}");
     }
 }
