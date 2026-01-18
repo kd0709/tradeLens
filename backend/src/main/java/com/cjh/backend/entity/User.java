@@ -28,6 +28,9 @@ public class User {
 
     private String avatar;
 
+    @TableField(value = "is_delete")
+    private Integer isDeleted;
+
     @TableField(fill = FieldFill.INSERT)
     private Integer status;
 

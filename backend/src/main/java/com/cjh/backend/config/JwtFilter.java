@@ -22,28 +22,25 @@ public class JwtFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final TokenBlacklist tokenBlacklist;
 
+    private void writeErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"code\":0,\"message\":\"" + message + "\",\"data\":null}");
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        String method = request.getMethod();
         String path = request.getRequestURI();
 
-        // 放行 OPTIONS 预检请求（CORS）
-        if ("OPTIONS".equalsIgnoreCase(method)) {
-            response.setStatus(HttpServletResponse.SC_OK);
-            return;
-        }
-
-        // 放行公开接口
         if (path.startsWith("/api/auth/") || path.equals("/error")) {
             System.out.println("放行公开接口");
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 获取并验证 Token
         String header = request.getHeader("Authorization");
         System.out.println("Authorization header: " + header);
         if (header == null || !header.startsWith("Bearer ")) {
@@ -87,9 +84,4 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private void writeErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
-        response.setStatus(status);
-        response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"code\":0,\"message\":\"" + message + "\",\"data\":null}");
-    }
 }

@@ -1,7 +1,7 @@
 package com.cjh.backend.service.impl;
 
 
-import com.cjh.backend.dto.UpdatePassword;
+import com.cjh.backend.dto.UserPassword;
 import com.cjh.backend.dto.UserInfo;
 import com.cjh.backend.entity.User;
 import com.cjh.backend.mapper.UserMapper;
@@ -44,7 +44,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updatePassword(Long userId, UpdatePassword request) {
+    public void updatePassword(Long userId, UserPassword request) {
 
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new RuntimeException("两次输入的新密码不一致");

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class UpdatePassword {
+public class UserPassword {
 
 
     @NotBlank(message = "旧密码不能为空")

@@ -2,7 +2,7 @@ package com.cjh.backend.controller;
 
 
 import com.cjh.backend.common.CurrentUser;
-import com.cjh.backend.dto.UpdatePassword;
+import com.cjh.backend.dto.UserPassword;
 import com.cjh.backend.dto.UserInfo;
 import com.cjh.backend.service.UserService;
 import com.cjh.backend.utils.Result;
@@ -35,7 +35,7 @@ public class UserController {
      */
     @PutMapping("/password")
     public Result<String> changePassword(@CurrentUser Long userId ,
-                                         @Valid @RequestBody UpdatePassword request) {
+                                         @Valid @RequestBody UserPassword request) {
         userService.updatePassword(userId, request);
         return Result.success("密码修改成功，请重新登录");
     }

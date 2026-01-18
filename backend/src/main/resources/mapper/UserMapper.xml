@@ -24,4 +24,13 @@
         avatar,status,role,
         create_time,update_time
     </sql>
+
+    <select id="selectSellerById" resultType="com.cjh.backend.dto.ProductSellerDto">
+        select id,
+               nickname,
+               avatar
+        from tradelens.user
+        where id = #{userId}
+    </select>
+
 </mapper>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cjh.backend.mapper.ProductImageMapper">
+
+    <resultMap id="BaseResultMap" type="com.cjh.backend.entity.ProductImage">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="productId" column="product_id" jdbcType="BIGINT"/>
+            <result property="imageUrl" column="image_url" jdbcType="VARCHAR"/>
+            <result property="isMain" column="is_main" jdbcType="TINYINT"/>
+            <result property="sort" column="sort" jdbcType="INTEGER"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,product_id,image_url,
+        is_main,sort,create_time
+    </sql>
+
+
+    <select id="selectFirstByProductId" resultType="com.cjh.backend.entity.ProductImage">
+        select *
+        from tradelens.product_image
+        where product_id = #{productId}
+        order by id asc
+        limit 1
+    </select>
+
+    <delete id="deleteByProductId">
+        delete from tradelens.product_image
+        where product_id = #{productId}
+    </delete>
+
+
+
+
+
+</mapper>

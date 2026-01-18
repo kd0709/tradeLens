@@ -1,7 +1,9 @@
 package com.cjh.backend.mapper;
 
+import com.cjh.backend.dto.ProductSellerDto;
 import com.cjh.backend.entity.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 /**
@@ -12,11 +14,14 @@ import org.apache.ibatis.annotations.Select;
 */
 public interface UserMapper extends BaseMapper<User> {
 
-    @Select("select * from idle_trade.user where username=#{username}")
+    @Select("select * from tradelens.user where username=#{username}")
     User selectByUsername(String username);
 
-    @Select("select count(1) from idle_trade.user where username=#{username}")
+    @Select("select count(1) from tradelens.user where username=#{username}")
     int countByUsername(String username);
+
+    ProductSellerDto selectSellerById(@Param("userId") Long userId);
+
 
 }
 

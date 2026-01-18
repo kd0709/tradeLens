@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class TokenBlacklist {
 
-    // 内存存储黑名单（生产用 Redis + 过期时间）
     private final Set<String> blacklist = ConcurrentHashMap.newKeySet();
 
     public void addToBlacklist(String token) {

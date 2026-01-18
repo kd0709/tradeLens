@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cjh.backend.mapper.ProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.cjh.backend.entity.Product">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="categoryId" column="category_id" jdbcType="BIGINT"/>
+            <result property="title" column="title" jdbcType="VARCHAR"/>
+            <result property="description" column="description" jdbcType="VARCHAR"/>
+            <result property="price" column="price" jdbcType="DECIMAL"/>
+            <result property="quantity" column="quantity" jdbcType="INTEGER"/>
+            <result property="conditionLevel" column="condition_level" jdbcType="TINYINT"/>
+            <result property="negotiable" column="negotiable" jdbcType="TINYINT"/>
+            <result property="productStatus" column="product_status" jdbcType="TINYINT"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="TINYINT"/>
+            <result property="viewCount" column="view_count" jdbcType="INTEGER"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,category_id,
+        title,description,price,
+        quantity,condition_level,negotiable,
+        product_status,is_deleted,view_count,
+        create_time,update_time
+    </sql>
+
+
+    <select id="selectByIdAndVisible" resultType="com.cjh.backend.entity.Product">
+        select *
+        from tradelens.product
+        where id = #{id}
+          and is_deleted = 0
+          and product_status != 1
+    </select>
+
+    <update id="incrementViewCount">
+        update tradelens.product
+        set view_count = view_count + 1,
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <select id="selectPageByQuery" resultType="com.cjh.backend.entity.Product">
+        select *
+        from product
+        where is_deleted = 0
+        and product_status = 2
+
+        <if test="q.categoryId != null">
+            and category_id = #{q.categoryId}
+        </if>
+
+        <if test="q.conditionLevel != null">
+            and condition_level = #{q.conditionLevel}
+        </if>
+
+        <if test="q.keyword != null and q.keyword != ''">
+            and title like concat('%', #{q.keyword}, '%')
+        </if>
+
+        <if test="q.minPrice != null">
+            and price &gt;= #{q.minPrice}
+        </if>
+
+        <if test="q.maxPrice != null">
+            and price &lt;= #{q.maxPrice}
+        </if>
+
+        order by create_time desc
+    </select>
+
+
+    <select id="selectFirstByProductId" resultType="com.cjh.backend.entity.ProductImage">
+        select *
+        from tradelens.product_image
+        where product_id = #{productId}
+        order by id asc
+        limit 1
+    </select>
+
+    <select id="selectMyProducts" resultType="com.cjh.backend.entity.Product">
+        select *
+        from tradelens.product
+        where user_id = #{userId}
+          and is_deleted = 0
+        order by create_time desc
+    </select>
+
+    <select id="selectByIdAndUser" resultType="com.cjh.backend.entity.Product">
+        select *
+        from tradelens.product
+        where id = #{id}
+          and user_id = #{userId}
+          and is_deleted = 0
+    </select>
+
+    <update id="updateProductInfo">
+        update tradelens.product
+        set
+            category_id = #{categoryId},
+            title = #{title},
+            description = #{description},
+            price = #{price},
+            quantity = #{quantity},
+            condition_level = #{conditionLevel},
+            negotiable = #{negotiable},
+            product_status = #{productStatus},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+    <update id="updateProductStatus">
+        update tradelens.product
+        set product_status = #{status},
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="markAsSold">
+        update tradelens.product
+        set product_status = 4,
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="logicalDelete">
+        update tradelens.product
+        set is_deleted = 1,
+            update_time = now()
+        where id = #{id}
+    </update>
+
+
+
+
+
+</mapper>

@@ -8,7 +8,7 @@ import com.cjh.backend.entity.User;
 import com.cjh.backend.service.AuthService;
 import com.cjh.backend.mapper.UserMapper;
 import com.cjh.backend.utils.JwtUtil;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 * @createDate 2026-01-04 17:15:32
 */
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
     implements AuthService {
 
