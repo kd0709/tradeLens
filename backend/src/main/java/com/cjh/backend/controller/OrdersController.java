@@ -19,21 +19,22 @@ public class OrdersController {
     @PostMapping
     public Result<Long> create(@CurrentUser Long userId,
                                @RequestBody @Valid OrderCreateDTO dto) {
+
         return Result.success(ordersService.createOrder(userId, dto));
     }
 
-    @PostMapping("/{id}/pay")
+    @PostMapping("/pay/{id}")
     public Result<Void> pay(@CurrentUser Long userId,
                             @PathVariable Long id) {
         ordersService.payOrder(id, userId);
-        return Result.success();
+        return Result.success("支付成功");
     }
 
-    @PostMapping("/{id}/complete")
+    @PostMapping("/complete/{id}")
     public Result<Void> complete(@CurrentUser Long userId,
                                  @PathVariable Long id) {
         ordersService.completeOrder(id, userId);
-        return Result.success();
+        return Result.success("订单完成");
     }
 
 }

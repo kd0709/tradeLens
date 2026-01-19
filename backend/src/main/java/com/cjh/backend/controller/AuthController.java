@@ -25,13 +25,13 @@ public class AuthController {
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
         authService.register(registerRequest);
-        return Result.success();
+        return Result.success("成功注册");
     }
 
     @PostMapping("/login")
     public Result<UserInfo> login(@Valid @RequestBody LoginRequest loginRequest) {
         UserInfo userInfo = authService.login(loginRequest);
-        return Result.success(userInfo);
+        return Result.success(userInfo,"登陆成功");
     }
 
     @PostMapping("/logout")
@@ -46,6 +46,6 @@ public class AuthController {
         } else {
             return Result.fail("无法获取 token");
         }
-        return Result.success();
+        return Result.success("成功登出");
     }
 }
