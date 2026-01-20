@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cjh.backend.dto.OrderCreateDTO;
 import com.cjh.backend.entity.Orders;
 import com.cjh.backend.entity.Product;
+import com.cjh.backend.exception.BusinessException;
+import com.cjh.backend.exception.ErrorConstants;
 import com.cjh.backend.mapper.ProductMapper;
 import com.cjh.backend.service.OrdersService;
 import com.cjh.backend.mapper.OrdersMapper;
@@ -33,15 +35,15 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         Product product = productMapper.selectById(dto.getProductId());
         if (product == null || product.getIsDeleted() == 1) {
-//            throw new BusinessException("商品不存在");
+            throw new BusinessException(ErrorConstants.PRODUCT_NOT_EXIST);
         }
 
         if (!product.getProductStatus().equals(2)) {
-//            throw new BusinessException("商品不可购买");
+            throw new BusinessException(ErrorConstants.PRODUCT_NOT_AVAILABLE);
         }
 
         if (product.getUserId().equals(buyerId)) {
-//            throw new BusinessException("不能购买自己发布的商品");
+            throw new BusinessException(ErrorConstants.CANNOT_BUY_OWN_PRODUCT);
         }
 
         Orders order = new Orders();
@@ -64,15 +66,15 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         Orders order = ordersMapper.selectById(orderId);
         if (order == null) {
-//            throw new BusinessException("订单不存在");
+            throw new BusinessException(ErrorConstants.ORDER_NOT_EXIST);
         }
 
         if (!order.getBuyerId().equals(buyerId)) {
-//            throw new BusinessException("无权支付该订单");
+            throw new BusinessException(ErrorConstants.ORDER_PAID_BY_OTHERS);
         }
 
         if (!order.getOrderStatus().equals(1)) {
-//            throw new BusinessException("订单状态异常");
+            throw new BusinessException(ErrorConstants.ORDER_STATUS_INVALID);
         }
 
         order.setOrderStatus(2);
@@ -86,15 +88,15 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         Orders order = ordersMapper.selectById(orderId);
         if (order == null) {
-//            throw new BusinessException("订单不存在");
+            throw new BusinessException(ErrorConstants.ORDER_NOT_EXIST);
         }
 
         if (!order.getSellerId().equals(sellerId)) {
-//            throw new BusinessException("无权操作该订单");
+            throw new BusinessException(ErrorConstants.ORDER_NOT_OWNED);
         }
 
         if (!order.getOrderStatus().equals(2)) {
-//            throw new BusinessException("订单未支付");
+            throw new BusinessException(ErrorConstants.ORDER_UNPAID);
         }
 
         // 更新订单状态
@@ -115,15 +117,15 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         Orders order = ordersMapper.selectById(orderId);
         if (order == null) {
-//            throw new BusinessException("订单不存在");
+            throw new BusinessException(ErrorConstants.ORDER_NOT_EXIST);
         }
 
         if (!order.getBuyerId().equals(buyerId)) {
-//            throw new BusinessException("无权取消");
+            throw new BusinessException(ErrorConstants.ORDER_NOT_OWNED);
         }
 
         if (!order.getOrderStatus().equals(1)) {
-//            throw new BusinessException("当前状态不能取消");
+            throw new BusinessException(ErrorConstants.ORDER_CANNOT_CANCEL);
         }
 
         order.setOrderStatus(4);

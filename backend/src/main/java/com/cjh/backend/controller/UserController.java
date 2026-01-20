@@ -8,10 +8,12 @@ import com.cjh.backend.service.UserService;
 import com.cjh.backend.utils.Result;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 
+@Slf4j
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
@@ -23,9 +25,7 @@ public class UserController {
     @PutMapping("/info")
     public Result<String> updateInfo(@CurrentUser Long userId ,
                                      @Valid @RequestBody UserInfo request) {
-        System.out.println("=== 更新用户信息 ===");
-        System.out.println("userId: " + userId);
-        System.out.println("request: " + request);
+        log.info("更新用户信息 - userId: {}, request: {}", userId, request);
         userService.updateUserInfo(userId, request);
         return Result.success("个人信息修改成功");
     }

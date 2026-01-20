@@ -5,6 +5,8 @@ import com.cjh.backend.dto.LoginRequest;
 import com.cjh.backend.dto.RegisterRequest;
 import com.cjh.backend.dto.UserInfo;
 import com.cjh.backend.entity.User;
+import com.cjh.backend.exception.BusinessException;
+import com.cjh.backend.exception.ErrorConstants;
 import com.cjh.backend.service.AuthService;
 import com.cjh.backend.mapper.UserMapper;
 import com.cjh.backend.utils.JwtUtil;
@@ -32,11 +34,11 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
         User user = userMapper.selectByUsername(loginRequest.getUsername());
 
         if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new BusinessException(ErrorConstants.USERNAME_PASSWORD_ERROR);
         }
 
         if (user.getStatus() != null && user.getStatus() == 0) {
-            throw new RuntimeException("账号已被封禁");
+            throw new BusinessException(ErrorConstants.USER_FROZEN);
         }
 
         // 生成 JWT Token
@@ -58,7 +60,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public void register(RegisterRequest registerRequest) {
         if (userMapper.countByUsername(registerRequest.getUsername()) > 0) {
-            throw new RuntimeException("用户名已存在");
+            throw new BusinessException(ErrorConstants.USERNAME_EXIST);
         }
 
         User user = new User();

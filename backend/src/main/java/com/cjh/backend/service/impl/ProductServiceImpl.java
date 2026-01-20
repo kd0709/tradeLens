@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cjh.backend.dto.*;
 import com.cjh.backend.entity.Product;
 import com.cjh.backend.entity.ProductImage;
+import com.cjh.backend.exception.BusinessException;
+import com.cjh.backend.exception.ErrorConstants;
 import com.cjh.backend.mapper.CategoryMapper;
 import com.cjh.backend.mapper.UserMapper;
 import com.cjh.backend.mapper.ProductImageMapper;
@@ -62,7 +64,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
         // 2. 插入商品主表
         int rows = productMapper.insert(product);
         if (rows != 1) {
-//            throw new BusinessException("商品发布失败");
+            throw new BusinessException(ErrorConstants.PRODUCT_PUBLISH_FAILED);
         }
 
         Long productId = product.getId();
@@ -86,13 +88,13 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
                 productMapper.selectByIdAndUser(productId, userId);
 
         if (product == null) {
-//            throw new BusinessException("商品不存在或无权操作");
+            throw new BusinessException(ErrorConstants.PRODUCT_NO_PERMISSION);
         }
 
         // 2. 校验状态
         Integer status = product.getProductStatus();
         if (status != 1 && status != 3) {
-//            throw new BusinessException("当前状态不允许修改商品信息");
+            throw new BusinessException(ErrorConstants.PRODUCT_CANNOT_MODIFY);
         }
 
         // 3. 更新商品信息
@@ -124,7 +126,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     @Transactional
     public void updateProductStatus(Long userId, Long productId, Integer status) {
         if (status == null || (status != 2 && status != 3)) {
-//            throw new BusinessException("非法的商品状态");
+            throw new BusinessException(ErrorConstants.PRODUCT_STATUS_INVALID);
         }
 
         // 1. 校验商品归属
@@ -132,18 +134,18 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
                 productMapper.selectByIdAndUser(productId, userId);
 
         if (product == null) {
-//            throw new BusinessException("商品不存在或无权操作");
+            throw new BusinessException(ErrorConstants.PRODUCT_NO_PERMISSION);
         }
 
         Integer currentStatus = product.getProductStatus();
 
         // 2. 状态流转校验
         if (currentStatus == 4) {
-//            throw new BusinessException("已售商品不可修改状态");
+            throw new BusinessException(ErrorConstants.PRODUCT_SOLD);
         }
 
         if (currentStatus == 1) {
-//            throw new BusinessException("待审核商品不可修改状态");
+            throw new BusinessException(ErrorConstants.PRODUCT_AUDITING);
         }
 
         if (currentStatus.equals(status)) {
@@ -161,11 +163,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
                 productMapper.selectByIdAndUser(productId, userId);
 
         if (product == null) {
-//            throw new BusinessException("商品不存在或无权操作");
+            throw new BusinessException(ErrorConstants.PRODUCT_NO_PERMISSION);
         }
 
         if (product.getProductStatus() == 2) {
-//            throw new BusinessException("上架商品不可删除");
+            throw new BusinessException(ErrorConstants.PRODUCT_CANNOT_DELETE);
         }
 
         if (product.getIsDeleted() == 1) {
@@ -182,7 +184,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
         // 1. 查询商品
         Product product = productMapper.selectByIdAndVisible(productId);
         if (product == null) {
-//            throw new BusinessException("商品不存在或已下架");
+            throw new BusinessException(ErrorConstants.PRODUCT_NOT_EXIST);
         }
 
         // 2. 浏览量 +1
@@ -243,7 +245,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     @Transactional
     public IPage<ProductDetailDto> listProductsByCategory(Long categoryId, Integer page, Integer size) {
         if (categoryId == null) {
-//            throw new BusinessException("分类ID不能为空");
+            throw new BusinessException(ErrorConstants.CATEGORY_ID_REQUIRED);
         }
 
         ProductQueryDto query = new ProductQueryDto();
@@ -284,7 +286,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     public void markProductSold(Long productId) {
         Product product = productMapper.selectById(productId);
         if (product == null || product.getIsDeleted() == 1) {
-//            throw new BusinessException("商品不存在");
+            throw new BusinessException(ErrorConstants.PRODUCT_NOT_EXIST);
         }
 
         Integer status = product.getProductStatus();
@@ -294,7 +296,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
         }
 
         if (status != 2) {
-//            throw new BusinessException("当前状态不允许标记为已售");
+            throw new BusinessException(ErrorConstants.PRODUCT_CANNOT_MARK_SOLD);
         }
 
         productMapper.markAsSold(productId);

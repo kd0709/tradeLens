@@ -1,5 +1,7 @@
 package com.cjh.backend.common;
 
+import com.cjh.backend.exception.BusinessException;
+import com.cjh.backend.exception.ErrorConstants;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,7 +34,7 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
                 SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication.getPrincipal() == null) {
-            throw new RuntimeException("未登录");
+            throw new BusinessException(ErrorConstants.USER_NOT_EXIST);
         }
 
         return authentication.getPrincipal(); // 就是 userId

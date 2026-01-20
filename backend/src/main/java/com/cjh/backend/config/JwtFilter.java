@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
@@ -36,36 +38,36 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         if (path.startsWith("/api/auth/") || path.equals("/error")) {
-            System.out.println("放行公开接口");
+            log.debug("放行公开接口: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
 
         String header = request.getHeader("Authorization");
-        System.out.println("Authorization header: " + header);
+        log.debug("Authorization header: {}", header);
         if (header == null || !header.startsWith("Bearer ")) {
-            System.out.println("401: 未提供 Token");
+            log.warn("401: 未提供 Token");
             writeErrorResponse(response, 401, "未提供 Token");
             return;
         }
 
         String token = header.substring(7);
-        System.out.println("Token: " + token.substring(0, Math.min(50, token.length())) + "...");
+        log.debug("Token: {}...", token.substring(0, Math.min(50, token.length())));
 
         if (!jwtUtil.validateToken(token)) {
-            System.out.println("401: Token 验证失败");
+            log.warn("401: Token 验证失败");
             writeErrorResponse(response, 401, "Token 无效或已过期");
             return;
         }
 
         if ( jwtUtil.isTokenExpired(token)) {
-            System.out.println("401: Token 已过期");
+            log.warn("401: Token 已过期");
             writeErrorResponse(response, 401, "Token 无效或已过期");
             return;
         }
 
         if (tokenBlacklist.isBlacklisted(token)) {
-            System.out.println("401: Token 在黑名单中");
+            log.warn("401: Token 在黑名单中");
             writeErrorResponse(response, 401, "Token 已失效，请重新登录");
             return;
         }
