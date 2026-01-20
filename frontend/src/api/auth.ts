@@ -1,5 +1,5 @@
 import request from './request'
-import { LoginRequest, RegisterRequest, UserInfo } from '../dto/auth'
+import type { LoginRequest, RegisterRequest, UserInfo } from '@/dto/auth'
 
 // 用户登录
 export function login(data: LoginRequest): Promise<UserInfo> {

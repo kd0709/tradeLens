@@ -1,4 +1,5 @@
-import { createRouter, createWebHistory, RouteRecordRaw, NavigationGuardNext } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
+import type {RouteRecordRaw}  from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Login from '../views/Login.vue'
 

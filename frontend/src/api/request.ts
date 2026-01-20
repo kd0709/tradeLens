@@ -1,4 +1,6 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
+import axios ,{ AxiosError} from 'axios'
+import type { AxiosInstance } from 'axios'
+
 import { ElMessage } from 'element-plus'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'

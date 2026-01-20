@@ -103,7 +103,9 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { ElMessage, FormInstance } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import type { FormInstance } from 'element-plus'
+
 
 const router = useRouter()
 const authStore = useAuthStore()

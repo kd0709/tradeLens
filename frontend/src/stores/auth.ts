@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { UserInfo } from '../dto/auth'
+import type { UserInfo } from '../dto/auth'
 import * as authApi from '../api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
