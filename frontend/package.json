@@ -11,8 +11,7 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build",
-    "lint": "eslint . --fix --cache"
+    "type-check": "vue-tsc --build"
   },
   "dependencies": {
     "pinia": "^3.0.4",
@@ -23,11 +22,7 @@
     "@tsconfig/node24": "^24.0.3",
     "@types/node": "^24.10.4",
     "@vitejs/plugin-vue": "^6.0.3",
-    "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.8.1",
-    "eslint": "^9.39.2",
-    "eslint-plugin-vue": "~10.6.2",
-    "jiti": "^2.6.1",
     "npm-run-all2": "^8.0.4",
     "typescript": "~5.9.3",
     "vite": "^7.3.0",
