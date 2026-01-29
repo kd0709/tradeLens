@@ -1,45 +1,64 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import type {RouteRecordRaw}  from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import Login from '../views/Login.vue'
-
-const routes: RouteRecordRaw[] = [
-  {
-    path: '/login',
-    name: 'Login',
-    component: Login,
-    meta: { requiresAuth: false },
-  },
-  {
-    path: '/',
-    name: 'Home',
-    component: () => import('../views/Home.vue'),
-    meta: { requiresAuth: true },
-  },
-]
+import Home from '../views/Home.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
+  // 滚动行为：跳转新页面时自动回到顶部
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0 }
+    }
+  },
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: Home
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/Login.vue')
+    },
+    {
+      path: '/product/:id',
+      name: 'ProductDetail',
+      component: () => import('../views/ProductDetail.vue')
+    },
+    {
+      path: '/publish',
+      name: 'Publish',
+      component: () => import('../views/Publish.vue'),
+      meta: { requiresAuth: true } 
+    },
+    {
+      path: '/user',
+      name: 'UserCenter',
+      component: () => import('../views/UserCenter.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/order/create',
+      name: 'OrderCreate',
+      component: () => import('../views/OrderCreate.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/pay/:id',
+      name: 'Pay',
+      component: () => import('../views/Pay.vue'),
+      meta: { requiresAuth: true }
+    }
+  ]
 })
 
-// 全局路由守卫
+// 简单的全局路由守卫（检查需要登录的页面）
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore()
-  
-  // 初始化认证状态
-  if (!authStore.user) {
-    authStore.initAuth()
-  }
-
-  const requiresAuth = to.meta.requiresAuth !== false
-
-  if (requiresAuth && !authStore.isLoggedIn) {
-    // 需要登录但未登录，重定向到登录页
+  const token = localStorage.getItem('token') // 假设 token 存在 localStorage
+  if (to.meta.requiresAuth && !token) {
     next('/login')
-  } else if (to.path === '/login' && authStore.isLoggedIn) {
-    // 已登录但要访问登录页，重定向到首页
-    next('/')
   } else {
     next()
   }

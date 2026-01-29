@@ -1,48 +1,24 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useAuthStore } from './stores/auth'
+import { RouterView } from 'vue-router'
+import NavBar from '@/components/NavBar.vue'
+import { useRoute } from 'vue-router'
 
-const authStore = useAuthStore()
-
-onMounted(() => {
-  authStore.initAuth()
-})
+const route = useRoute()
 </script>
 
 <template>
-  <router-view></router-view>
+  <NavBar v-if="route.name !== 'login'" />
+  
+  <RouterView />
 </template>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html,
+/* 全局重置样式，保证极简风格 */
 body {
-  width: 100%;
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue',
-    Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  background-color: #f9fafb; /* 浅灰背景 */
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
-
-#app {
-  width: 100%;
-  height: 100%;
-}
-
-/* 绿色主题主色 */
-:root {
-  --el-color-primary: #10b981;
-  --el-color-primary-light-3: #d1fae5;
-  --el-color-primary-light-5: #a7f3d0;
-  --el-color-primary-light-7: #6ee7b7;
-  --el-color-primary-light-8: #34d399;
-  --el-color-primary-light-9: #10b981;
-  --el-color-success: #10b981;
-}
+a { text-decoration: none; }
 </style>
