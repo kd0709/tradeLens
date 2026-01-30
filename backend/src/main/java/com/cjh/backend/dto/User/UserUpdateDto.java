@@ -1,5 +1,5 @@
 // com.cjh.backend.dto.user.UserUpdateReq.java
-package com.cjh.backend.dto;
+package com.cjh.backend.dto.User;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

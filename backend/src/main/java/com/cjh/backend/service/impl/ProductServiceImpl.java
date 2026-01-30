@@ -2,6 +2,7 @@ package com.cjh.backend.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cjh.backend.dto.*;
+import com.cjh.backend.dto.Product.*;
 import com.cjh.backend.entity.Product;
 import com.cjh.backend.entity.ProductImage;
 import com.cjh.backend.service.ProductService;

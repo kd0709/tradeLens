@@ -59,7 +59,7 @@
           AND is_deleted = 0
     </update>
 
-    <select id="getSellerInfoById" resultType="com.cjh.backend.dto.SellerInfoDto">
+    <select id="getSellerInfoById" resultType="com.cjh.backend.dto.User.SellerInfoDto">
         SELECT
         u.id,
         u.nickname,

@@ -1,9 +1,9 @@
 package com.cjh.backend.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.cjh.backend.dto.SellerInfoDto;
-import com.cjh.backend.dto.UserInfoDto;
-import com.cjh.backend.dto.UserUpdateDto;
+import com.cjh.backend.dto.User.SellerInfoDto;
+import com.cjh.backend.dto.User.UserInfoDto;
+import com.cjh.backend.dto.User.UserUpdateDto;
 import com.cjh.backend.entity.User;
 import com.cjh.backend.service.UserService;
 import com.cjh.backend.mapper.UserMapper;

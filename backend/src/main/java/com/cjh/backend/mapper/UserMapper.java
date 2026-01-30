@@ -1,7 +1,7 @@
 package com.cjh.backend.mapper;
 
-import com.cjh.backend.dto.SellerInfoDto;
-import com.cjh.backend.dto.UserInfoDto;
+import com.cjh.backend.dto.User.SellerInfoDto;
+import com.cjh.backend.dto.User.UserInfoDto;
 import com.cjh.backend.entity.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;

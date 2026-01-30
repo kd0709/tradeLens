@@ -19,4 +19,21 @@
         order_id,score,content,
         create_time
     </sql>
+
+    <!-- 商品评价列表 - 联表查询用户信息 -->
+    <select id="selectCommentsByProductId" resultType="com.cjh.backend.dto.Comment.CommentListDto">
+        SELECT
+            c.id,
+            c.user_id,
+            u.nickname,
+            u.avatar,
+            c.score,
+            c.content,
+            c.create_time
+        FROM tradelens.comment c
+                 LEFT JOIN tradelens.user u ON c.user_id = u.id
+        WHERE c.product_id = #{productId}
+        ORDER BY c.create_time DESC
+    </select>
+
 </mapper>

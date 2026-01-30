@@ -70,7 +70,7 @@
         <!-- AND product_status IN (1, 2, 5) -->
     </update>
 
-    <select id="listMyProducts" resultType="com.cjh.backend.dto.ProductMyDto">
+    <select id="listMyProducts" resultType="com.cjh.backend.dto.Product.ProductMyDto">
         SELECT
         p.id,
         p.title,
@@ -98,7 +98,7 @@
         </if>
     </select>
 
-    <select id="searchProducts" resultType="com.cjh.backend.dto.ProductListDto">
+    <select id="searchProducts" resultType="com.cjh.backend.dto.Product.ProductListDto">
         SELECT
         p.id,
         p.title,

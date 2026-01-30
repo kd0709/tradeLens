@@ -1,5 +1,5 @@
 // com.cjh.backend.dto.address.AddressListDto.java
-package com.cjh.backend.dto;
+package com.cjh.backend.dto.Address;
 
 import lombok.Data;
 

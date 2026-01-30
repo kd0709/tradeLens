@@ -2,10 +2,10 @@ package com.cjh.backend.controller;
 
 
 import com.cjh.backend.common.CurrentUser;
-import com.cjh.backend.dto.PasswordUpdateDto;
-import com.cjh.backend.dto.SellerInfoDto;
-import com.cjh.backend.dto.UserInfoDto;
-import com.cjh.backend.dto.UserUpdateDto;
+import com.cjh.backend.dto.Auth.PasswordUpdateDto;
+import com.cjh.backend.dto.User.SellerInfoDto;
+import com.cjh.backend.dto.User.UserInfoDto;
+import com.cjh.backend.dto.User.UserUpdateDto;
 import com.cjh.backend.service.UserService;
 import com.cjh.backend.utils.Result;
 import jakarta.validation.Valid;

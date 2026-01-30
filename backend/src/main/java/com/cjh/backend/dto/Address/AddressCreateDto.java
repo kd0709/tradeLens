@@ -1,5 +1,5 @@
 // com.cjh.backend.dto.address.AddressCreateDto.java
-package com.cjh.backend.dto;
+package com.cjh.backend.dto.Address;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

@@ -1,6 +1,6 @@
 package com.cjh.backend.mapper;
 
-import com.cjh.backend.dto.AddressListDto;
+import com.cjh.backend.dto.Address.AddressListDto;
 import com.cjh.backend.entity.Address;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;

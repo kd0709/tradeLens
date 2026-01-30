@@ -17,4 +17,16 @@
         id,user_id,product_id,
         quantity,create_time,update_time
     </sql>
+
+    <select id="selectCartListByUserId" resultType="com.cjh.backend.dto.Cart.CartListDto">
+        SELECT
+        c.id, c.product_id, c.quantity, c.create_time,
+        p.title AS product_title,
+        p.price
+        FROM tradelens.cart c
+        LEFT JOIN tradelens.product p ON c.product_id = p.id
+        WHERE c.user_id = #{userId}
+        ORDER BY c.create_time DESC
+    </select>
+
 </mapper>

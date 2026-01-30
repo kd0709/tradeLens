@@ -1,9 +1,9 @@
 package com.cjh.backend.controller;
 
 
-import com.cjh.backend.dto.LoginRequest;
-import com.cjh.backend.dto.RegisterRequest;
-import com.cjh.backend.dto.UserInfoDto;
+import com.cjh.backend.dto.Auth.LoginRequest;
+import com.cjh.backend.dto.Auth.RegisterRequest;
+import com.cjh.backend.dto.User.UserInfoDto;
 import com.cjh.backend.service.AuthService;
 import com.cjh.backend.utils.Result;
 import com.cjh.backend.utils.TokenBlacklist;

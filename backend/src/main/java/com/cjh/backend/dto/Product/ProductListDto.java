@@ -1,4 +1,4 @@
-package com.cjh.backend.dto;
+package com.cjh.backend.dto.Product;
 
 import lombok.Data;
 

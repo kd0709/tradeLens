@@ -1,7 +1,5 @@
-package com.cjh.backend.dto;
+package com.cjh.backend.dto.Product;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

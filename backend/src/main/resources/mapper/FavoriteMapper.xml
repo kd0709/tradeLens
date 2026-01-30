@@ -15,4 +15,19 @@
         id,user_id,product_id,
         create_time
     </sql>
+
+    <select id="selectFavoriteListByUserId" resultType="com.cjh.backend.dto.Favorite.FavoriteListDto">
+        SELECT
+            f.id,
+            f.product_id,
+            p.title,
+            p.price,
+            (SELECT image_url FROM tradelens.product_image WHERE product_id = f.product_id ORDER BY sort ASC LIMIT 1) AS image_url,
+            f.create_time
+        FROM tradelens.favorite f
+                 LEFT JOIN tradelens.product p ON f.product_id = p.id
+        WHERE f.user_id = #{userId}
+        ORDER BY f.create_time DESC
+    </select>
+
 </mapper>

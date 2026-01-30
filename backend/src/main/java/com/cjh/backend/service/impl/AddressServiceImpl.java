@@ -1,9 +1,9 @@
 package com.cjh.backend.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.cjh.backend.dto.AddressCreateDto;
-import com.cjh.backend.dto.AddressListDto;
-import com.cjh.backend.dto.AddressUpdateDto;
+import com.cjh.backend.dto.Address.AddressCreateDto;
+import com.cjh.backend.dto.Address.AddressListDto;
+import com.cjh.backend.dto.Address.AddressUpdateDto;
 import com.cjh.backend.entity.Address;
 import com.cjh.backend.service.AddressService;
 import com.cjh.backend.mapper.AddressMapper;

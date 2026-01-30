@@ -3,6 +3,9 @@ package com.cjh.backend.mapper;
 import com.cjh.backend.entity.OrderItem;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 /**
 * @author 45209
@@ -14,6 +17,12 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface OrderItemMapper extends BaseMapper<OrderItem> {
 
+
+    /**
+     * 根据订单ID查询明细
+     */
+    @Select("SELECT * FROM tradelens.order_item WHERE order_id = #{orderId}")
+    List<OrderItem> selectByOrderId(Long orderId);
 }
 
 

@@ -1,5 +1,5 @@
 // com.cjh.backend.dto.user.SellerInfoDto.java
-package com.cjh.backend.dto;
+package com.cjh.backend.dto.User;
 
 import lombok.Data;
 

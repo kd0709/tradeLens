@@ -1,8 +1,8 @@
 package com.cjh.backend.mapper;
 
-import com.cjh.backend.dto.ProductDetailDto;
-import com.cjh.backend.dto.ProductListDto;
-import com.cjh.backend.dto.ProductMyDto;
+import com.cjh.backend.dto.Product.ProductDetailDto;
+import com.cjh.backend.dto.Product.ProductListDto;
+import com.cjh.backend.dto.Product.ProductMyDto;
 import com.cjh.backend.entity.Product;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.cjh.backend.entity.ProductImage;

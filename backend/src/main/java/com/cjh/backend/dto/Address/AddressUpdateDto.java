@@ -1,5 +1,5 @@
 // com.cjh.backend.dto.address.AddressUpdateDto.java
-package com.cjh.backend.dto;
+package com.cjh.backend.dto.Address;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

@@ -1,9 +1,9 @@
 package com.cjh.backend.controller;
 
 import com.cjh.backend.common.CurrentUser;
-import com.cjh.backend.dto.AddressCreateDto;
-import com.cjh.backend.dto.AddressListDto;
-import com.cjh.backend.dto.AddressUpdateDto;
+import com.cjh.backend.dto.Address.AddressCreateDto;
+import com.cjh.backend.dto.Address.AddressListDto;
+import com.cjh.backend.dto.Address.AddressUpdateDto;
 import com.cjh.backend.service.AddressService;
 import com.cjh.backend.utils.Result;
 import jakarta.validation.Valid;

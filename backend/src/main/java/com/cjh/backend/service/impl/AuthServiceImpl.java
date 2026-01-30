@@ -1,9 +1,9 @@
 package com.cjh.backend.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.cjh.backend.dto.LoginRequest;
-import com.cjh.backend.dto.RegisterRequest;
-import com.cjh.backend.dto.UserInfoDto;
+import com.cjh.backend.dto.Auth.LoginRequest;
+import com.cjh.backend.dto.Auth.RegisterRequest;
+import com.cjh.backend.dto.User.UserInfoDto;
 import com.cjh.backend.entity.User;
 import com.cjh.backend.exception.BusinessException;
 import com.cjh.backend.exception.ErrorConstants;

@@ -2,6 +2,7 @@ package com.cjh.backend.controller;// 商品模块开始，新建 ProductControl
 
 
 import com.cjh.backend.dto.*;
+import com.cjh.backend.dto.Product.*;
 import com.cjh.backend.service.ProductService;
 import lombok.extern.slf4j.Slf4j;
 import com.cjh.backend.common.CurrentUser;
@@ -98,10 +99,8 @@ public class ProductController {
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) Integer status,
             @CurrentUser Long userId) {
-
         log.info("用户 {} 查询我的发布列表：page={}, size={}, status={}",
                 userId, page, size, status);
-
         try {
             PageDto<ProductMyDto> result = productService.listMyProducts(userId, page, size, status);
             log.info("用户 {} 我的发布列表查询成功，共 {} 条", userId, result.getTotal());
@@ -130,7 +129,6 @@ public class ProductController {
         try {
             PageDto<ProductListDto> result = productService.listProducts(
                     keyword, categoryId, minPrice, maxPrice, condition, sort, page, size);
-
             log.info("商品搜索成功，共 {} 条", result.getTotal());
             return Result.success(result);
         } catch (Exception e) {
@@ -146,18 +144,14 @@ public class ProductController {
     public Result<ProductDetailDto> getProductDetail(
             @PathVariable("id") Long productId,
             @CurrentUser Long currentUserId) {  // currentUserId 可为 null（未登录）
-
         log.info("查询商品详情：productId = {}, 当前用户 = {}", productId, currentUserId);
-
         try {
             ProductDetailDto detail = productService.getProductDetail(productId, currentUserId);
             if (detail == null) {
                 return Result.fail(404, "商品不存在或已下架");
             }
-
             // 更新浏览量（可选异步）
             productService.incrementViewCount(productId);
-
             log.info("商品详情查询成功：productId = {}", productId);
             return Result.success(detail);
         } catch (Exception e) {
