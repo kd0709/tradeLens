@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cjh.backend.mapper.AddressMapper">
+
+    <resultMap id="BaseResultMap" type="com.cjh.backend.entity.Address">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="receiverName" column="receiver_name" jdbcType="VARCHAR"/>
+            <result property="receiverPhone" column="receiver_phone" jdbcType="VARCHAR"/>
+            <result property="province" column="province" jdbcType="VARCHAR"/>
+            <result property="city" column="city" jdbcType="VARCHAR"/>
+            <result property="district" column="district" jdbcType="VARCHAR"/>
+            <result property="detailAddress" column="detail_address" jdbcType="VARCHAR"/>
+            <result property="isDefault" column="is_default" jdbcType="TINYINT"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="TINYINT"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,receiver_name,
+        receiver_phone,province,city,
+        district,detail_address,is_default,
+        is_deleted,create_time
+    </sql>
+
+    <insert id="insertAddress" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tradelens.address (
+            user_id,
+            receiver_name,
+            receiver_phone,
+            province,
+            city,
+            district,
+            detail_address,
+            is_default,
+            is_deleted,
+            create_time
+        ) VALUES (
+                     #{userId},
+                     #{receiverName},
+                     #{receiverPhone},
+                     #{province},
+                     #{city},
+                     #{district},
+                     #{detailAddress},
+                     #{isDefault},
+                     1 ,
+                     NOW()
+                 )
+    </insert>
+
+    <update id="updateAddressSelective">
+        UPDATE address
+        <set>
+            <if test="receiverName != null and receiverName != ''">
+                receiver_name = #{receiverName},
+            </if>
+            <if test="receiverPhone != null and receiverPhone != ''">
+                receiver_phone = #{receiverPhone},
+            </if>
+            <if test="province != null and province != ''">
+                province = #{province},
+            </if>
+            <if test="city != null and city != ''">
+                city = #{city},
+            </if>
+            <if test="district != null and district != ''">
+                district = #{district},
+            </if>
+            <if test="detailAddress != null and detailAddress != ''">
+                detail_address = #{detailAddress},
+            </if>
+            <if test="isDefault != null">
+                is_default = #{isDefault}
+            </if>
+        </set>
+        WHERE id = #{id}
+        AND user_id = #{userId}
+        AND is_deleted = 0
+    </update>
+
+    <update id="deleteByIdAndUserId">
+        UPDATE tradelens.address
+        SET
+            is_deleted = 1
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND is_deleted = 0
+    </update>
+
+
+
+</mapper>

@@ -1,36 +1,32 @@
 package com.cjh.backend.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.cjh.backend.dto.ProductDetailDto;
-import com.cjh.backend.dto.ProductPublishDto;
-import com.cjh.backend.dto.ProductQueryDto;
+import com.cjh.backend.dto.*;
 import com.cjh.backend.entity.Product;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.math.BigDecimal;
 
 /**
 * @author 45209
 * @description 针对表【product(商品表)】的数据库操作Service
-* @createDate 2026-01-14 14:57:56
+* @createDate 2026-01-29 18:58:49
 */
 public interface ProductService extends IService<Product> {
 
-    Long publishProduct(Long userId, ProductPublishDto dto);
+    Long publishProduct(Long userId, ProductPublishDto req);
 
-    void updateProductInfo(Long userId, Long productId, ProductPublishDto dto);
+    boolean updateProductStatus(Long userId, ProductStatusUpdateDto req);
 
-    void updateProductStatus(Long userId, Long productId, Integer status);
+    boolean deleteProduct(Long userId, Long productId);
 
-    void deleteProduct(Long userId, Long productId);
+    PageDto<ProductMyDto> listMyProducts(Long userId, Integer page, Integer size, Integer status);
 
-    ProductDetailDto getProductDetail(Long productId);
+    PageDto<ProductListDto> listProducts(
+            String keyword, Long categoryId, BigDecimal minPrice, BigDecimal maxPrice,
+            Integer condition, String sort, Integer page, Integer size);
 
-    IPage<ProductDetailDto> listProducts(ProductQueryDto query);
+    ProductDetailDto getProductDetail(Long productId, Long currentUserId);
 
-    IPage<ProductDetailDto> listProductsByCategory(Long categoryId, Integer page, Integer size);
-
-    IPage<ProductDetailDto> listMyProducts(Long userId, Integer page, Integer size);
-
-    void markProductSold(Long productId);
+    void incrementViewCount(Long productId);
 
 }

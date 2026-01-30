@@ -1,15 +1,23 @@
 package com.cjh.backend.service;
 
-import com.cjh.backend.dto.UserPassword;
-import com.cjh.backend.dto.UserInfo;
-import org.springframework.web.multipart.MultipartFile;
+import com.cjh.backend.dto.SellerInfoDto;
+import com.cjh.backend.dto.UserInfoDto;
+import com.cjh.backend.dto.UserUpdateDto;
+import com.cjh.backend.entity.User;
+import com.baomidou.mybatisplus.extension.service.IService;
 
-public interface UserService {
+/**
+* @author 45209
+* @description 针对表【user(用户表)】的数据库操作Service
+* @createDate 2026-01-29 18:58:49
+*/
+public interface UserService extends IService<User> {
 
-    public void updateUserInfo(Long id, UserInfo userInfo);
+    UserInfoDto getUserInfo(Long userId);
 
-    public void updatePassword(Long id, UserPassword userPassword);
+    UserInfoDto updateUserInfo(Long userId, UserUpdateDto req);
 
-    public String updateAvatar(Long id, MultipartFile updateAvatar);
+    void updatePassword(Long userId, String oldPassword, String newPassword);
 
+    SellerInfoDto getSellerInfo(Long sellerId);
 }

@@ -7,14 +7,16 @@ export enum OrderStatus {
   CANCELLED = 5 // 已取消
 }
 
+
+// 订单数据传输对象
 export interface OrderDto {
   id: number
   orderNo: string
   buyerId: number
   sellerId: number
   productId: number
-  productTitle?: string // 后端最好联表查询带回来，或者前端单独查
-  productImage?: string // 同上
+  productTitle?: string // 后端联表查询带回来
+  productImage?: string // 后端联表查询带回来
   totalPrice: number
   orderStatus: OrderStatus
   receiverName: string

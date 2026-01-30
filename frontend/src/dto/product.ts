@@ -34,3 +34,13 @@ export interface PageResult<T> {
   total: number
   records: T[]
 }
+
+// 发布商品 DTO
+export interface ProductPublishDto {
+  title: string
+  description: string
+  price: number
+  categoryId: number
+  conditionLevel: number
+  images: string[]
+}

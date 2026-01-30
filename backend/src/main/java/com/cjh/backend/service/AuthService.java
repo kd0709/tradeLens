@@ -2,7 +2,7 @@ package com.cjh.backend.service;
 
 import com.cjh.backend.dto.LoginRequest;
 import com.cjh.backend.dto.RegisterRequest;
-import com.cjh.backend.dto.UserInfo;
+import com.cjh.backend.dto.UserInfoDto;
 import com.cjh.backend.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -15,5 +15,5 @@ public interface AuthService extends IService<User> {
 
     void register(RegisterRequest registerRequest);
 
-    UserInfo login(LoginRequest loginRequest);
+    UserInfoDto login(LoginRequest loginRequest);
 }

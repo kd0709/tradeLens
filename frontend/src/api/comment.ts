@@ -1,13 +1,7 @@
 import request from './request'
+import type { CommentDto } from '../dto/comment'
 
-// 发布评价
-export interface CommentDto {
-  orderId: number
-  productId: number
-  score: number
-  content: string
-}
-
+// 发布商品评价
 export function publishComment(data: CommentDto): Promise<void> {
   return request.post('/api/comment/publish', data)
 }

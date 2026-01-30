@@ -14,6 +14,7 @@
             <result property="avatar" column="avatar" jdbcType="VARCHAR"/>
             <result property="status" column="status" jdbcType="TINYINT"/>
             <result property="role" column="role" jdbcType="TINYINT"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="TINYINT"/>
             <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
             <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
     </resultMap>
@@ -22,15 +23,59 @@
         id,username,password,
         nickname,phone,email,
         avatar,status,role,
-        create_time,update_time
+        is_deleted,create_time,update_time
     </sql>
 
-    <select id="selectSellerById" resultType="com.cjh.backend.dto.ProductSellerDto">
-        select id,
-               nickname,
-               avatar
-        from tradelens.user
-        where id = #{userId}
+    <!-- 更新用户资料（动态 set，只更新非空字段） -->
+    <update id="updateUserProfile">
+        UPDATE user
+        <set>
+            <if test="nickname != null and nickname != ''">
+                nickname = #{nickname},
+            </if>
+            <if test="phone != null and phone != ''">
+                phone = #{phone},
+            </if>
+            <if test="email != null and email != ''">
+                email = #{email},
+            </if>
+            <if test="avatar != null and avatar != ''">
+                avatar = #{avatar},
+            </if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{userId}
+        AND status = 1
+        AND is_deleted = 0
+    </update>
+
+    <update id="updatePassword">
+        UPDATE tradelens.user
+        SET
+            password = #{newPassword},
+            update_time = NOW()
+        WHERE id = #{userId}
+          AND status = 1
+          AND is_deleted = 0
+    </update>
+
+    <select id="getSellerInfoById" resultType="com.cjh.backend.dto.SellerInfoDto">
+        SELECT
+        u.id,
+        u.nickname,
+        u.phone,
+        u.email,
+        u.avatar,
+        u.create_time,
+        COUNT(p.id) AS product_count
+        FROM tradelens.user u
+        LEFT JOIN tradelens.product p ON p.user_id = u.id
+        AND p.is_deleted = 0
+        AND p.product_status IN (1, 2, 3)  <!-- 待审核、上架、交易中 -->
+        WHERE u.id = #{sellerId}
+        AND u.status = 1
+        AND u.is_deleted = 0
+        GROUP BY u.id, u.nickname, u.phone, u.email, u.avatar, u.create_time
     </select>
 
 </mapper>

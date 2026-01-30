@@ -29,114 +29,132 @@
         create_time,update_time
     </sql>
 
+    <insert id="insertProduct" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tradelens.product (
+            user_id, category_id, title, description, price, quantity,
+            condition_level, negotiable, product_status, is_deleted, view_count, create_time, update_time
+        ) VALUES (
+                     #{userId}, #{categoryId}, #{title}, #{description}, #{price}, #{quantity},
+                     #{conditionLevel}, #{negotiable}, 1 , 0 , 1 , NOW(), NOW()
+                 )
+    </insert>
 
-    <select id="selectByIdAndVisible" resultType="com.cjh.backend.entity.Product">
-        select *
-        from tradelens.product
-        where id = #{id}
-          and is_deleted = 0
-          and product_status != 1
-    </select>
-
-    <update id="incrementViewCount">
-        update tradelens.product
-        set view_count = view_count + 1,
-            update_time = now()
-        where id = #{id}
-    </update>
-
-    <select id="selectPageByQuery" resultType="com.cjh.backend.entity.Product">
-        select *
-        from product
-        where is_deleted = 0
-        and product_status = 2
-
-        <if test="q.categoryId != null">
-            and category_id = #{q.categoryId}
-        </if>
-
-        <if test="q.conditionLevel != null">
-            and condition_level = #{q.conditionLevel}
-        </if>
-
-        <if test="q.keyword != null and q.keyword != ''">
-            and title like concat('%', #{q.keyword}, '%')
-        </if>
-
-        <if test="q.minPrice != null">
-            and price &gt;= #{q.minPrice}
-        </if>
-
-        <if test="q.maxPrice != null">
-            and price &lt;= #{q.maxPrice}
-        </if>
-
-        order by create_time desc
-    </select>
-
-
-    <select id="selectFirstByProductId" resultType="com.cjh.backend.entity.ProductImage">
-        select *
-        from tradelens.product_image
-        where product_id = #{productId}
-        order by id asc
-        limit 1
-    </select>
-
-    <select id="selectMyProducts" resultType="com.cjh.backend.entity.Product">
-        select *
-        from tradelens.product
-        where user_id = #{userId}
-          and is_deleted = 0
-        order by create_time desc
-    </select>
-
-    <select id="selectByIdAndUser" resultType="com.cjh.backend.entity.Product">
-        select *
-        from tradelens.product
-        where id = #{id}
-          and user_id = #{userId}
-          and is_deleted = 0
-    </select>
-
-    <update id="updateProductInfo">
-        update tradelens.product
-        set
-            category_id = #{categoryId},
-            title = #{title},
-            description = #{description},
-            price = #{price},
-            quantity = #{quantity},
-            condition_level = #{conditionLevel},
-            negotiable = #{negotiable},
-            product_status = #{productStatus},
-            update_time = #{updateTime}
-        where id = #{id}
-    </update>
+    <insert id="insertProductImage">
+        INSERT INTO tradelens.product_image (
+            product_id, image_url, is_main, sort, create_time
+        ) VALUES (
+                     #{productId}, #{imageUrl}, #{isMain}, #{sort}, NOW()
+                 )
+    </insert>
 
     <update id="updateProductStatus">
-        update tradelens.product
-        set product_status = #{status},
-            update_time = now()
-        where id = #{id}
+        UPDATE tradelens.product
+        SET
+        product_status = #{status},
+        update_time = NOW()
+        WHERE id = #{id}
+        AND user_id = #{userId}
+        AND product_status IN (1, 2, 5)   <!-- 允许从 待审核/上架/下架 变更 -->
+        AND is_deleted = 0
     </update>
 
-    <update id="markAsSold">
-        update tradelens.product
-        set product_status = 4,
-            update_time = now()
-        where id = #{id}
+    <update id="deleteProductByIdAndUserId">
+        UPDATE tradelens.product
+        SET
+        is_deleted = 1,
+        update_time = NOW()
+        WHERE id = #{id}
+        AND user_id = #{userId}
+        AND is_deleted = 0
+        <!-- 可选限制：只允许删除某些状态的商品 -->
+        <!-- AND product_status IN (1, 2, 5) -->
     </update>
 
-    <update id="logicalDelete">
-        update tradelens.product
-        set is_deleted = 1,
-            update_time = now()
-        where id = #{id}
-    </update>
+    <select id="listMyProducts" resultType="com.cjh.backend.dto.ProductMyDto">
+        SELECT
+        p.id,
+        p.title,
+        p.price,
+        p.product_status AS productStatus,
+        (SELECT image_url FROM product_image WHERE product_id = p.id AND is_main = 1 LIMIT 1) AS mainImage,
+        p.create_time AS createTime
+        FROM product p
+        WHERE p.user_id = #{userId}
+        AND p.is_deleted = 0
+        <if test="status != null">
+            AND p.product_status = #{status}
+        </if>
+        ORDER BY p.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
 
+    <select id="countMyProducts" resultType="int">
+        SELECT COUNT(*)
+        FROM product
+        WHERE user_id = #{userId}
+        AND is_deleted = 0
+        <if test="status != null">
+            AND product_status = #{status}
+        </if>
+    </select>
 
+    <select id="searchProducts" resultType="com.cjh.backend.dto.ProductListDto">
+        SELECT
+        p.id,
+        p.title,
+        p.price,
+        p.condition_level AS conditionLevel,
+        (SELECT image_url FROM product_image WHERE product_id = p.id AND is_main = 1 LIMIT 1) AS mainImage,
+        u.nickname AS sellerNickname,
+        p.view_count AS viewCount,
+        p.create_time AS createTime
+        FROM product p
+        INNER JOIN user u ON p.user_id = u.id
+        WHERE p.is_deleted = 0
+        AND p.product_status = 2   <!-- 只显示已上架的 -->
+        <if test="keyword != null and keyword != ''">
+            AND p.title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        <if test="minPrice != null">
+            AND p.price >= #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND p.price &lt;= #{maxPrice}
+        </if>
+        <if test="condition != null">
+            AND p.condition_level = #{condition}
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sort == 'price_asc'">p.price ASC</when>
+            <when test="sort == 'price_desc'">p.price DESC</when>
+            <otherwise>p.create_time DESC</otherwise>  <!-- 默认按时间降序 -->
+        </choose>
+        LIMIT #{offset}, #{size}
+    </select>
 
-
-
+    <select id="countSearchProducts" resultType="int">
+        SELECT COUNT(*)
+        FROM product p
+        WHERE p.is_deleted = 0
+        AND p.product_status = 2
+        <if test="keyword != null and keyword != ''">
+            AND p.title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        <if test="minPrice != null">
+            AND p.price >= #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND p.price &lt;= #{maxPrice}
+        </if>
+        <if test="condition != null">
+            AND p.condition_level = #{condition}
+        </if>
+    </select>
 </mapper>

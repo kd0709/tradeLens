@@ -3,7 +3,7 @@ package com.cjh.backend.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cjh.backend.dto.LoginRequest;
 import com.cjh.backend.dto.RegisterRequest;
-import com.cjh.backend.dto.UserInfo;
+import com.cjh.backend.dto.UserInfoDto;
 import com.cjh.backend.entity.User;
 import com.cjh.backend.exception.BusinessException;
 import com.cjh.backend.exception.ErrorConstants;
@@ -30,7 +30,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
 
 
     @Override
-    public UserInfo login(LoginRequest loginRequest) {
+    public UserInfoDto login(LoginRequest loginRequest) {
         User user = userMapper.selectByUsername(loginRequest.getUsername());
 
         if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
@@ -44,15 +44,15 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
         // 生成 JWT Token
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
-        UserInfo userInfo = new UserInfo();
-        userInfo.setUsername(user.getUsername());
-        userInfo.setNickname(user.getNickname());
-        userInfo.setPhone(user.getPhone());
-        userInfo.setEmail(user.getEmail());
-        userInfo.setAvatar(user.getAvatar());
-        userInfo.setToken(token);
+        UserInfoDto userInfoDto = new UserInfoDto();
+        userInfoDto.setUsername(user.getUsername());
+        userInfoDto.setNickname(user.getNickname());
+        userInfoDto.setPhone(user.getPhone());
+        userInfoDto.setEmail(user.getEmail());
+        userInfoDto.setAvatar(user.getAvatar());
+        userInfoDto.setToken(token);
 
-        return userInfo;
+        return userInfoDto;
 
 
     }

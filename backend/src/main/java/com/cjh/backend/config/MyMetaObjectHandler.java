@@ -15,6 +15,7 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject, "status", Integer.class, 1);
         this.strictInsertFill(metaObject, "role", Integer.class, 0);
+        this.strictInsertFill(metaObject, "isDeleted", Integer.class, 0);
     }
 
     @Override

@@ -3,7 +3,7 @@ package com.cjh.backend.controller;
 
 import com.cjh.backend.dto.LoginRequest;
 import com.cjh.backend.dto.RegisterRequest;
-import com.cjh.backend.dto.UserInfo;
+import com.cjh.backend.dto.UserInfoDto;
 import com.cjh.backend.service.AuthService;
 import com.cjh.backend.utils.Result;
 import com.cjh.backend.utils.TokenBlacklist;
@@ -21,19 +21,27 @@ public class AuthController {
     private final AuthService authService;
     private final TokenBlacklist tokenBlacklist;
 
-
+    /**
+     * 注册
+     */
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
         authService.register(registerRequest);
         return Result.success("成功注册");
     }
 
+    /**
+     * 登录
+     */
     @PostMapping("/login")
-    public Result<UserInfo> login(@Valid @RequestBody LoginRequest loginRequest) {
-        UserInfo userInfo = authService.login(loginRequest);
-        return Result.success(userInfo,"登陆成功");
+    public Result<UserInfoDto> login(@Valid @RequestBody LoginRequest loginRequest) {
+        UserInfoDto userInfoDto = authService.login(loginRequest);
+        return Result.success(userInfoDto,"登陆成功");
     }
 
+    /**
+     * 登出
+     */
     @PostMapping("/logout")
     public Result<Void> logout() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

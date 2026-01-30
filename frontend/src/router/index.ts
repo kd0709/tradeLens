@@ -50,13 +50,19 @@ const router = createRouter({
       name: 'Pay',
       component: () => import('../views/Pay.vue'),
       meta: { requiresAuth: true }
-    }
+    },
+    {
+      path: '/cart',
+      name: 'Cart',
+      component: () => import('../views/Cart.vue'),
+      meta: { requiresAuth: true }
+    },
   ]
 })
 
 // 简单的全局路由守卫（检查需要登录的页面）
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token') // 假设 token 存在 localStorage
+  const token = localStorage.getItem('token') //  token 存在 localStorage
   if (to.meta.requiresAuth && !token) {
     next('/login')
   } else {

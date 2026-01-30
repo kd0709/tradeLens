@@ -101,6 +101,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Star, ShoppingCart } from '@element-plus/icons-vue'
 import { getProductDetail } from '@/api/product'
+import { addToCart } from '@/api/cart'
 import type { ProductDto } from '@/dto/product'
 // 如果你有 cartStore 可以在这里导入
 
@@ -160,9 +161,19 @@ const handleBuy = () => {
 }
 
 // 加入购物车
-const handleAddToCart = () => {
-  // TODO: 调用 store.addToCart
-  ElMessage.success('已加入购物车')
+const handleAddToCart = async () => {
+  if (!product.value) return
+  // 判断是否登录
+  // const token = ... 
+  
+  try {
+    await addToCart({ productId: product.value.id, quantity: 1 })
+    ElMessage.success('已加入购物车')
+  } catch (e) {
+    console.error(e)
+    // 如果没有后端，这里可能会报错。
+    // 为了演示，你可以暂时在这里写一个 ElMessage.success('（演示）已加入购物车')
+  }
 }
 
 const toggleLike = () => {

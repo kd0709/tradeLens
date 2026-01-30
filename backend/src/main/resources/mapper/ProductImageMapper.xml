@@ -17,23 +17,4 @@
         id,product_id,image_url,
         is_main,sort,create_time
     </sql>
-
-
-    <select id="selectFirstByProductId" resultType="com.cjh.backend.entity.ProductImage">
-        select *
-        from tradelens.product_image
-        where product_id = #{productId}
-        order by id asc
-        limit 1
-    </select>
-
-    <delete id="deleteByProductId">
-        delete from tradelens.product_image
-        where product_id = #{productId}
-    </delete>
-
-
-
-
-
 </mapper>

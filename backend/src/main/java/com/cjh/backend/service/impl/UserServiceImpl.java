@@ -1,79 +1,88 @@
 package com.cjh.backend.service.impl;
 
-
-import com.cjh.backend.dto.UserPassword;
-import com.cjh.backend.dto.UserInfo;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cjh.backend.dto.SellerInfoDto;
+import com.cjh.backend.dto.UserInfoDto;
+import com.cjh.backend.dto.UserUpdateDto;
 import com.cjh.backend.entity.User;
-import com.cjh.backend.exception.BusinessException;
-import com.cjh.backend.exception.ErrorConstants;
-import com.cjh.backend.mapper.UserMapper;
 import com.cjh.backend.service.UserService;
-import com.cjh.backend.utils.JwtUtil;
-import lombok.AllArgsConstructor;
+import com.cjh.backend.mapper.UserMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
-
+/**
+* @author 45209
+* @description 针对表【user(用户表)】的数据库操作Service实现
+* @createDate 2026-01-29 18:58:49
+*/
 @Service
-@AllArgsConstructor
-public class UserServiceImpl implements UserService {
+@RequiredArgsConstructor
+public class UserServiceImpl extends ServiceImpl<UserMapper, User>
+    implements UserService{
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
-
 
     @Override
-    public void updateUserInfo(Long userId, UserInfo request) {
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorConstants.USER_NOT_EXIST);
-        }
-
-        // 只更新非空字段
-        if (request.getNickname() != null && !request.getNickname().trim().isEmpty()) {
-            user.setNickname(request.getNickname().trim());
-        }
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
-        }
-        if (request.getEmail() != null) {
-            user.setEmail(request.getEmail());
-        }
-
-        userMapper.updateById(user);
+    public UserInfoDto getUserInfo(Long userId) {
+        return userMapper.getUserInfoById(userId);
     }
 
     @Override
-    public void updatePassword(Long userId, UserPassword request) {
-
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw new BusinessException(ErrorConstants.PASSWORD_NOT_MATCH);
-        }
-
+    @Transactional(rollbackFor = Exception.class)
+    public UserInfoDto updateUserInfo(Long userId, UserUpdateDto req) {
+        // 先简单查一下用户是否存在且正常（可选，但建议保留）
         User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ErrorConstants.USER_NOT_EXIST);
+        if (user == null || user.getStatus() != 1 || user.getIsDeleted() == 1) {
+            throw new IllegalArgumentException("用户不存在或状态异常");
+        }
+        int rows = userMapper.updateUserProfile(
+                userId,
+                req.getNickname(),
+                req.getPhone(),
+                req.getEmail(),
+                req.getAvatar()
+        );
+        if (rows == 0) {
+            throw new IllegalArgumentException("更新失败，可能无变更或用户状态异常");
+        }
+        // 返回最新数据
+        return userMapper.getUserInfoById(userId);
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePassword(Long userId, String oldPassword, String newPassword) {
+        // 1. 获取当前加密密码
+        String currentEncrypted = userMapper.getPasswordById(userId);
+        if (currentEncrypted == null) {
+            throw new IllegalArgumentException("用户不存在或状态异常");
         }
 
-        // 验证原密码
-        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorConstants.PASSWORD_OLD_ERROR);
+        // 2. 校验旧密码（假设你使用 BCryptPasswordEncoder 加密）
+        if (!passwordEncoder.matches(oldPassword, currentEncrypted)) {
+            throw new IllegalArgumentException("旧密码错误");
         }
 
-        // 新旧密码不能相同
-        if (request.getOldPassword().equals(request.getNewPassword())) {
-            throw new BusinessException(ErrorConstants.PASSWORD_SAME_AS_OLD);
-        }
+        // 3. 加密新密码
+        String newEncrypted = passwordEncoder.encode(newPassword);
 
-        // 更新密码
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userMapper.updateById(user);
+        // 4. 更新数据库
+        int rows = userMapper.updatePassword(userId, newEncrypted);
+        if (rows == 0) {
+            throw new IllegalArgumentException("密码更新失败");
+        }
     }
 
     @Override
-    public String updateAvatar(Long userId, MultipartFile updateAvatar) {
-        return "";
+    public SellerInfoDto getSellerInfo(Long sellerId) {
+        return userMapper.getSellerInfoById(sellerId);
     }
 }
+
+
+
+

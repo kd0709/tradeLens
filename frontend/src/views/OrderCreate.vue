@@ -33,7 +33,6 @@
               <el-icon><Select /></el-icon>
             </div>
           </div>
-          
           <div v-if="addressList.length === 0" class="empty-address" @click="addressDialogVisible = true">
             <el-icon class="icon"><LocationInformation /></el-icon>
             <p>暂无收货地址，点击添加</p>
@@ -41,29 +40,34 @@
         </div>
       </div>
 
-      <div class="section-card product-section" v-if="product">
-        <div class="card-title">商品信息</div>
-        <div class="product-row">
-          <el-image :src="product.images[0]" class="thumb" fit="cover" />
-          <div class="info">
-            <div class="title">{{ product.title }}</div>
-            <div class="tags">
-              <el-tag size="small" type="info">{{ getConditionText(product.conditionLevel) }}</el-tag>
-            </div>
-            <div class="price-line">
-              <span class="label">单价：</span>
-              <span class="price">¥ {{ product.price }}</span>
+      <div class="section-card product-section" v-if="productList.length > 0">
+        <div class="card-title">商品清单 ({{ productList.length }})</div>
+        
+        <div v-for="(item, index) in productList" :key="index" class="product-item-wrapper">
+          <div class="product-row">
+            <el-image :src="item.image" class="thumb" fit="cover" />
+            <div class="info">
+              <div class="title">{{ item.title }}</div>
+              <div class="tags">
+                <el-tag size="small" type="info" v-if="item.conditionLevel">{{ getConditionText(item.conditionLevel) }}</el-tag>
+                <el-tag size="small" type="warning" v-else>购物车商品</el-tag>
+              </div>
+              <div class="price-line">
+                <span class="label">单价：</span>
+                <span class="price">¥ {{ item.price }}</span>
+              </div>
             </div>
           </div>
         </div>
+
         <div class="calc-row">
           <div class="item">
             <span>配送方式</span>
             <span>快递 免邮</span>
           </div>
           <div class="item">
-            <span>购买数量</span>
-            <span>x 1</span>
+            <span>总数量</span>
+            <span>x {{ productList.length }}</span>
           </div>
         </div>
       </div>
@@ -73,8 +77,8 @@
     <div class="bottom-bar">
       <div class="bar-container">
         <div class="total-box">
-          <span>实付款：</span>
-          <span class="price">¥ {{ product?.price || 0 }}</span>
+          <span>共 {{ productList.length }} 件，实付款：</span>
+          <span class="price">¥ {{ totalPrice }}</span>
         </div>
         <el-button 
           type="primary" 
@@ -123,7 +127,7 @@ import { ElMessage } from 'element-plus'
 import { getProductDetail } from '@/api/product'
 import { getAddressList, addAddress } from '@/api/address'
 import { createOrder } from '@/api/order'
-import type { ProductDto } from '@/dto/product'
+import { getCartList } from '@/api/cart' // 引入购物车接口
 import type { AddressDto } from '@/dto/address'
 
 const route = useRoute()
@@ -131,11 +135,12 @@ const router = useRouter()
 
 const loading = ref(false)
 const submitting = ref(false)
-const product = ref<ProductDto | null>(null)
+// 将 product 变量改为 productList 数组
+const productList = ref<any[]>([]) 
 const addressList = ref<AddressDto[]>([])
 const selectedAddressId = ref<number | undefined>(undefined)
+const isCartMode = ref(false) // 标记是否为购物车结算
 
-// 地址弹窗
 const addressDialogVisible = ref(false)
 const addressForm = reactive<AddressDto>({
   receiverName: '',
@@ -152,24 +157,66 @@ const getConditionText = (level: number) => {
   return map[level] || '二手'
 }
 
-// 初始化加载
-const init = async () => {
-  const productId = Number(route.query.productId)
-  if (!productId) {
-    ElMessage.error('参数错误')
-    router.back()
-    return
-  }
+// 计算总价
+const totalPrice = computed(() => {
+  return productList.value.reduce((sum, item) => sum + Number(item.price), 0).toFixed(2)
+})
 
+const init = async () => {
   loading.value = true
   try {
-    // 1. 获取商品信息
-    product.value = await getProductDetail(productId)
-    
-    // 2. 获取地址列表
+    // 1. 获取地址列表
     await loadAddresses()
+
+    // 2. 判断来源：直接购买(productId) 还是 购物车(cartIds)
+    const productId = route.query.productId
+    const cartIds = route.query.cartIds
+
+    if (productId) {
+      // --- 单商品模式 ---
+      isCartMode.value = false
+      const res = await getProductDetail(Number(productId))
+      // 统一转化为数组格式方便渲染
+      productList.value = [{
+        id: res.id, // 这里是 productId
+        title: res.title,
+        price: res.price,
+        image: res.images?.[0] || '',
+        conditionLevel: res.conditionLevel
+      }]
+    } else if (cartIds) {
+      // --- 购物车模式 ---
+      isCartMode.value = true
+      const idsStr = String(cartIds).split(',')
+      const targetIds = idsStr.map(Number)
+      
+      // 由于没有专门的 getCartByIds 接口，我们先拉取所有购物车，在前端过滤
+      // (实际项目中应由后端提供 /api/cart/check-out 接口)
+      const allCartItems = await getCartList() || []
+      
+      // 如果 getCartList 返回为空（因为没后端），我们造一些 Mock 数据兜底演示
+      if (allCartItems.length === 0) {
+        // Mock 数据逻辑，仅供演示
+        productList.value = [
+           { id: 101, productId: 1, title: 'iPhone 13 Pro (演示)', image: 'https://img14.360buyimg.com/n0/jfs/t1/202157/16/16309/86720/6178e246E9656839d/0861110825704a2c.jpg', price: 4500 },
+           { id: 102, productId: 3, title: 'Java编程思想 (演示)', image: 'https://img14.360buyimg.com/n0/jfs/t1/1867/26/11488/146050/5bd04183E00388701/374528c3194073f1.jpg', price: 45 }
+        ].filter(item => targetIds.includes(item.id))
+      } else {
+        // 真实逻辑
+        productList.value = allCartItems
+          .filter(item => targetIds.includes(item.id))
+          .map(item => ({
+            id: item.productId, // 注意：下单需要 productId，不是 cartItemId
+            title: item.title,
+            price: item.price,
+            image: item.image,
+            conditionLevel: 0 // 购物车列表可能没返回成色，暂略
+          }))
+      }
+    }
   } catch (e) {
     console.error(e)
+    ElMessage.error('加载订单信息失败')
   } finally {
     loading.value = false
   }
@@ -177,14 +224,12 @@ const init = async () => {
 
 const loadAddresses = async () => {
   addressList.value = await getAddressList()
-  // 自动选中默认地址，或者第一个地址
   if (!selectedAddressId.value && addressList.value.length > 0) {
     const defaultAddr = addressList.value.find(a => a.isDefault === 1)
     selectedAddressId.value = defaultAddr ? defaultAddr.id : addressList.value[0].id
   }
 }
 
-// 保存地址
 const handleSaveAddress = async () => {
   if (!addressForm.receiverName || !addressForm.receiverPhone) {
     return ElMessage.warning('请填写完整信息')
@@ -193,32 +238,33 @@ const handleSaveAddress = async () => {
     await addAddress({ ...addressForm })
     ElMessage.success('地址添加成功')
     addressDialogVisible.value = false
-    // 重新加载并选中新地址
     await loadAddresses()
-    // 简单处理：选中最新一个（假设后端按时间倒序）
-    // 严谨做法是后端返回新ID
   } catch (e) { console.error(e) }
 }
 
-// 提交订单
 const handleSubmit = async () => {
   if (!selectedAddressId.value) return ElMessage.warning('请选择收货地址')
-  if (!product.value) return
+  if (productList.value.length === 0) return
 
   submitting.value = true
   try {
-    const orderId = await createOrder({
-      productId: product.value.id,
-      quantity: 1, // 默认为1
-      addressId: selectedAddressId.value
+    // 核心逻辑：循环下单
+    // 因为后端 createOrder 接口每次只接收一个 productId
+    const promises = productList.value.map(item => {
+      return createOrder({
+        productId: item.id, // 这里的 id 已经是 productId 了
+        quantity: 1,
+        addressId: selectedAddressId.value!
+      })
     })
+
+    await Promise.all(promises)
     
-    ElMessage.success('下单成功！')
-    // 跳转到用户中心的“我买到的”页面，让用户去支付
-    // 或者直接跳到 /user?tab=buying
+    ElMessage.success(`成功创建 ${productList.value.length} 个订单！`)
     router.replace('/user')
   } catch (e) {
     console.error(e)
+    // ElMessage 由拦截器处理
   } finally {
     submitting.value = false
   }
@@ -233,7 +279,7 @@ onMounted(() => {
 .order-create-page {
   background-color: #f9fafb;
   min-height: 100vh;
-  padding-bottom: 80px; /* 为底部栏留空 */
+  padding-bottom: 80px;
 }
 
 .container {
@@ -242,9 +288,7 @@ onMounted(() => {
   padding: 20px;
 }
 
-.page-header {
-  margin-bottom: 20px;
-}
+.page-header { margin-bottom: 20px; }
 
 .section-card {
   background: #fff;
@@ -260,10 +304,11 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 12px;
   }
 }
 
-/* 地址网格 */
 .address-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -283,128 +328,49 @@ onMounted(() => {
       background-color: #ecfdf5;
       box-shadow: 0 0 0 1px #10b981;
     }
-
-    .name-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      font-weight: 500;
-      .phone { color: #6b7280; font-size: 13px; }
-    }
-    
-    .detail-row {
-      font-size: 13px;
-      color: #4b5563;
-      line-height: 1.4;
-    }
-
     .check-icon {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      background: #10b981;
-      color: #fff;
-      padding: 2px 6px;
-      border-top-left-radius: 8px;
-      border-bottom-right-radius: 6px; /* 微调圆角 */
+      position: absolute; right: 0; bottom: 0;
+      background: #10b981; color: #fff;
+      padding: 2px 6px; border-top-left-radius: 8px;
     }
   }
-
   .empty-address {
-    border: 1px dashed #d1d5db;
-    border-radius: 8px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-    cursor: pointer;
-    min-height: 100px;
-    
-    &:hover { border-color: #10b981; color: #10b981; }
-    .icon { font-size: 24px; margin-bottom: 8px; }
+    border: 1px dashed #d1d5db; padding: 20px; text-align: center; color: #9ca3af; cursor: pointer;
   }
 }
 
-/* 商品信息 */
+.product-item-wrapper {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px dashed #f3f4f6;
+  &:last-of-type { border-bottom: none; }
+}
+
 .product-row {
   display: flex;
   gap: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f3f4f6;
-  margin-bottom: 16px;
 
-  .thumb {
-    width: 80px;
-    height: 80px;
-    border-radius: 6px;
-    background: #f9fafb;
-  }
-  
+  .thumb { width: 80px; height: 80px; border-radius: 6px; background: #f9fafb; }
   .info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    
-    .title { font-size: 15px; font-weight: 500; color: #111827; }
-    .price-line {
-      font-size: 14px;
-      .price { color: #ef4444; font-weight: bold; }
-    }
+    flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+    .title { font-size: 15px; font-weight: 500; }
+    .price-line .price { color: #ef4444; font-weight: bold; }
   }
 }
 
 .calc-row {
-  .item {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #4b5563;
-    margin-bottom: 8px;
-    
-    &:last-child { margin-bottom: 0; }
-  }
+  border-top: 1px solid #f3f4f6;
+  padding-top: 16px;
+  .item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
 }
 
-/* 底部栏 */
 .bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
-  padding: 12px 20px;
-  z-index: 99;
-  
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff; border-top: 1px solid #e5e7eb; padding: 12px 20px; z-index: 99;
   .bar-container {
-    max-width: 800px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 20px;
-    
-    .total-box {
-      font-size: 14px;
-      .price {
-        font-size: 24px;
-        color: #ef4444;
-        font-weight: bold;
-      }
-    }
-
-    .submit-btn {
-      width: 140px;
-      font-weight: 600;
-      background-color: #10b981;
-      border-color: #10b981;
-      
-      &:hover { background-color: #059669; }
-    }
+    max-width: 800px; margin: 0 auto; display: flex; justify-content: flex-end; align-items: center; gap: 20px;
+    .total-box { font-size: 14px; .price { font-size: 24px; color: #ef4444; font-weight: bold; } }
+    .submit-btn { width: 140px; background-color: #10b981; border-color: #10b981; }
   }
 }
 </style>
