@@ -7,13 +7,9 @@ export function login(data: LoginRequest): Promise<UserInfo> {
   return request.post('/api/auth/login', data)
 }
 
-// 用户注册（后端不需要confirmPassword，前端验证即可）
+// 用户注册
 export function register(data: RegisterRequest): Promise<void> {
-  // 只传username和password，confirmPassword在前端验证
-  return request.post('/api/auth/register', {
-    username: data.username,
-    password: data.password
-  })
+  return request.post('/api/auth/register', data)
 }
 
 // 用户登出

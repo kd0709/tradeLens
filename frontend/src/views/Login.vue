@@ -72,7 +72,6 @@
             class="form-button"
             native-type="submit"
             :loading="loading"
-            @click="handleSubmit"
           >
             {{ isLogin ? '登 录' : '注 册' }}
           </el-button>
@@ -104,7 +103,6 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
-// ⬇️ 必须导入图标
 import { User, Lock, ChatDotRound, Postcard } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -134,7 +132,7 @@ const rules = {
   confirmPassword: [
     { required: true, message: '确认密码不能为空', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_rule: any, value: string, callback: any) => {
         if (value !== formData.password) {
           callback(new Error('两次密码不一致'))
         } else {
@@ -148,36 +146,42 @@ const rules = {
 
 function toggleMode() {
   isLogin.value = !isLogin.value
-  formRef.value?.resetFields() // 使用 resetFields 更彻底
+  formRef.value?.resetFields()
 }
 
 async function handleSubmit() {
   if (!formRef.value) return
 
+  // 前端表单校验
   await formRef.value.validate(async (valid) => {
-    if (valid) {
-      loading.value = true
-      try {
-        if (isLogin.value) {
-          await authStore.login(formData.username, formData.password)
-          ElMessage.success('登录成功！')
-          router.push('/')
-        } else {
-          await authStore.register(
-            formData.username,
-            formData.password,
-            formData.confirmPassword // 传递确认密码
-          )
-          ElMessage.success('注册成功！请登录')
-          isLogin.value = true
-          formData.password = ''
-          formData.confirmPassword = ''
-        }
-      } catch (error: any) {
-        ElMessage.error(error.message || '操作失败')
-      } finally {
-        loading.value = false
+    if (!valid) return
+
+    loading.value = true
+    try {
+      if (isLogin.value) {
+        // 登录业务
+        await authStore.login({
+            username: formData.username,
+            password: formData.password
+        })
+        ElMessage.success('登录成功！')
+        router.push('/')
+      } else {
+        // 注册业务
+        await authStore.register({
+          username: formData.username,
+          password: formData.password
+        })
+        
+        ElMessage.success('注册成功！请登录')
+        isLogin.value = true
+        formData.password = ''
+        formData.confirmPassword = ''
       }
+    } catch (error: any) {
+      ElMessage.error(error.message || '操作失败')
+    } finally {
+      loading.value = false
     }
   })
 }

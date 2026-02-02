@@ -96,7 +96,8 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
-import { getProductList, getCategoryList } from '@/api/product'
+import { getProductList } from '@/api/product'
+import { getCategoryList } from '@/api/category'
 import type { ProductDto, ProductQuery } from '@/dto/product'
 
 const router = useRouter()

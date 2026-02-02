@@ -46,7 +46,7 @@
                      #{district},
                      #{detailAddress},
                      #{isDefault},
-                     1 ,
+                     0 ,
                      NOW()
                  )
     </insert>

@@ -107,8 +107,8 @@ import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, UploadRequestOptions, UploadUserFile } from 'element-plus'
 import { uploadFile } from '@/api/common'
-import { publishProduct, getCategoryList } from '@/api/product'
-
+import { publishProduct } from '@/api/product'
+import { getCategoryList } from '@/api/category'
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)

@@ -9,10 +9,12 @@ import com.cjh.backend.utils.Result;
 import com.cjh.backend.utils.TokenBlacklist;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -26,8 +28,15 @@ public class AuthController {
      */
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        authService.register(registerRequest);
-        return Result.success("成功注册");
+        log.info("用户 {} 注册", registerRequest.getUsername());
+        try {
+            authService.register(registerRequest);
+            log.info("注册成功");
+            return Result.success("注册成功");
+        } catch (Exception e) {
+            log.info("注册失败" ,e);
+            return Result.fail("注册失败");
+        }
     }
 
     /**
@@ -35,8 +44,15 @@ public class AuthController {
      */
     @PostMapping("/login")
     public Result<UserInfoDto> login(@Valid @RequestBody LoginRequest loginRequest) {
-        UserInfoDto userInfoDto = authService.login(loginRequest);
-        return Result.success(userInfoDto,"登陆成功");
+        log.info("用户 {} 登录", loginRequest.getUsername());
+        try {
+            UserInfoDto userInfoDto = authService.login(loginRequest);
+            log.info("登录成功");
+            return Result.success(userInfoDto,"登陆成功");
+        } catch (Exception e) {
+            log.error("用户登陆失败", e);
+            return Result.fail("注册失败");
+        }
     }
 
     /**

@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 /**
 * @author 45209
 * @description 针对表【user(用户表)】的数据库操作Service实现
@@ -66,7 +68,8 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUsername(registerRequest.getUsername());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        user.setNickname("邪恶水蜜桃");
+        String randomStr = UUID.randomUUID().toString().substring(0, 8); // 取前8位
+        user.setNickname("邪恶水蜜桃_" + randomStr);
 
         userMapper.insert(user);
     }

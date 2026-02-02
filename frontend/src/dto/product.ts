@@ -29,11 +29,7 @@ export interface ProductQuery {
   sort?: 'price_asc' | 'price_desc' | 'time_desc'
 }
 
-// 分页响应结构
-export interface PageResult<T> {
-  total: number
-  list: T[]
-}
+
 
 // 发布商品 DTO
 export interface ProductPublishDto {
@@ -44,3 +40,10 @@ export interface ProductPublishDto {
   conditionLevel: number
   images: string[]
 }
+
+
+export interface ProductStatusUpdateDto {
+  id: number
+  status: number
+}
+
