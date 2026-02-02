@@ -12,6 +12,8 @@ public class ProductMyDto {
     private BigDecimal price;
     private Integer productStatus;
     private String mainImage;  // 主图 URL
+
+
     private LocalDateTime createTime;
 }
 

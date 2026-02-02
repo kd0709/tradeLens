@@ -2,7 +2,7 @@
   <div class="user-center">
     <div class="container">
       <div class="user-profile-card">
-        <el-avatar :size="80" :src="authStore.user?.avatar || defaultAvatar" />
+        <el-avatar :size="80" :src="getFullImageUrl(authStore.user.avatar) || defaultAvatar" />
         <div class="info">
           <h2 class="nickname">{{ authStore.user?.nickname || '未登录用户' }}</h2>
           <p class="email">{{ authStore.user?.email || '暂无邮箱' }}</p>
@@ -161,6 +161,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { getFullImageUrl } from '@/utils/image'
 
 // API 导入
 import { getBuyerOrders, getSellerOrders, deliverOrder, confirmOrder, cancelOrder } from '@/api/order'

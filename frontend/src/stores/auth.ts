@@ -15,6 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
     
     // 假设后端返回结构为 { token: string, user: UserInfo }
     // 如果 result 直接就是 UserInfo 且包含 token，则按需提取
+    console.log(result)
     token.value = result.token
     user.value = result 
 
@@ -36,7 +37,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authApi.logout()
     } catch (err) {
-      console.error('登出接口调用失败', err)
     } finally {
       token.value = ''
       user.value = null

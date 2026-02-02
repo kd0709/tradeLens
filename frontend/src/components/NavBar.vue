@@ -33,7 +33,7 @@
            
            <el-dropdown trigger="click">
             <div class="avatar-wrapper">
-              <el-avatar :size="36" :src="authStore.user.avatar || defaultAvatar" />
+              <el-avatar :size="36" :src="getFullImageUrl(authStore.user.avatar) || defaultAvatar" />
               <span class="username">{{ authStore.user.nickname }}</span>
             </div>
             <template #dropdown>
@@ -61,6 +61,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Search, ShoppingCart } from '@element-plus/icons-vue'
+import { getFullImageUrl } from '@/utils/image'
 
 const router = useRouter()
 const authStore = useAuthStore()

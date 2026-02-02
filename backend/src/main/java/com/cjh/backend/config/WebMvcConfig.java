@@ -32,6 +32,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 将 URL 中的 /images/** 映射到本地磁盘路径
         // 注意：file: 后面的路径必须以 / 结尾
         registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:" + uploadDir + "/");
+                .addResourceLocations("file:" + uploadDir);
     }
 }

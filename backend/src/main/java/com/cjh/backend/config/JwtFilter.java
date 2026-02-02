@@ -37,7 +37,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        if (path.startsWith("/api/auth/") || path.equals("/error")) {
+        if (path.startsWith("/api/auth/") || path.equals("/error") || path.startsWith("/images/")) {
             log.debug("放行公开接口: {}", path);
             filterChain.doFilter(request, response);
             return;

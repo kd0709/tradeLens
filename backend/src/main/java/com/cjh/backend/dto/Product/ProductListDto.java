@@ -14,6 +14,9 @@ public class ProductListDto {
     private Integer conditionLevel;
     private String mainImage;         // 主图
     private String sellerNickname;    // 卖家昵称
+
+    private String sellerAvatar;
+
     private Integer viewCount;
     private LocalDateTime createTime;
 }

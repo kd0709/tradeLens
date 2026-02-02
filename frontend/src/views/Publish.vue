@@ -145,24 +145,21 @@ const rules = {
   }]
 }
 
-// 自定义上传逻辑
+const handleRemove = (uploadFile: UploadUserFile) => {
+  console.log('文件已移除:', uploadFile)
+}
+
 const handleUpload = async (options: UploadRequestOptions) => {
   try {
     const url = await uploadFile(options.file)
-    // 这里的 url 假设是后端返回的完整 OSS 路径
-    // 我们需要将它绑定到 fileList item 上，或者单独维护一个 images 数组
-    
-    // Element Plus 的 fileList 会自动管理 UI，我们只需要把 URL 存起来
-    // 为了方便，我们在提交时统一处理 fileList
-    options.onSuccess(url)
+
+    options.onSuccess(
+      { url }, // 统一成对象
+    )
   } catch (error) {
     options.onError(error as any)
     ElMessage.error('图片上传失败')
   }
-}
-
-const handleRemove = (file: any) => {
-  console.log('Remove', file)
 }
 
 // 加载分类列表
@@ -189,34 +186,38 @@ const submitForm = async () => {
       submitting.value = true
       try {
         // 1. 提取上传成功的图片 URL
-        // uploadFile返回UploadDto对象，response字段存储url字符串
-        const imageUrls = fileList.value.map(file => {
-          // file.response可能是字符串（url）或对象（UploadDto），需要提取url字段
-          if (typeof file.response === 'string') {
-            return file.response
-          } else if (file.response && typeof file.response === 'object') {
-            return (file.response as any).url || file.response
-          }
-          return file.url as string
-        }).filter(url => url && url.trim())
+        const imageUrls = fileList.value
+          .map(file => {
+            const resp = file.response;
+            if (typeof resp === 'string') return resp;
+            if (resp && typeof resp === 'object') return (resp as any).url;
+            return null;
+          })
+          .filter((url): url is string => !!url); // 过滤掉 null 或 undefined
 
-        if (imageUrls.length === 0) {
-          ElMessage.warning('图片正在上传中，请稍后...')
-          return
+        // 2. 检查图片是否全部上传成功
+        // 如果你选择了 1 张图，但 imageUrls 为空，则会进这个判断
+        if (imageUrls.length < fileList.value.length) {
+          ElMessage.warning('部分图片尚未上传完成或上传失败，请稍后');
+          submitting.value = false;
+          return;
         }
 
-        // 2. 调用发布接口
+        // 3. 调用发布接口
+        // 确保传递的是组装好的数据
         await publishProduct({
-          ...form,
+          title: form.title,
+          description: form.description,
+          price: form.price,
           categoryId: form.categoryId!,
-          images: imageUrls
+          conditionLevel: form.conditionLevel,
+          images: imageUrls // 发送 string[]
         })
 
         ElMessage.success('发布成功！')
-        router.push('/') // 回到首页
+        router.push('/')
       } catch (error) {
-        console.error(error)
-        // ElMessage 由 request 拦截器处理或在此处理
+        console.error('发布失败:', error)
       } finally {
         submitting.value = false
       }
