@@ -5,11 +5,13 @@ export function uploadFile(file: File): Promise<string> {
   const formData = new FormData()
   formData.append('file', file)
   
-  // 注意：这里返回的是 data 字段，假设后端直接返回图片 URL 字符串
-  // 如果后端返回结构是 { code: 200, data: "url" }，request 拦截器已经解包了 data
+  // 后端返回UploadDto，包含url字段
   return request.post('/api/common/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
+  }).then((res: any) => {
+    // 如果后端返回的是对象，提取url字段
+    return typeof res === 'string' ? res : (res.url || res)
   })
 }

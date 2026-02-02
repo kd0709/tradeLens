@@ -192,6 +192,26 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void payOrder(Long userId, String orderNo, String payType) {
+        Orders order = ordersMapper.selectByOrderNo(orderNo);
+        if (order == null || !order.getBuyerId().equals(userId)) {
+            throw new RuntimeException("订单不存在或无权限");
+        }
+        if (order.getStatus() != 1) {
+            throw new RuntimeException("订单状态不允许支付");
+        }
+
+        // 更新订单状态为待发货
+        order.setStatus(2);
+        order.setPayTime(LocalDateTime.now());
+        int rows = ordersMapper.updateById(order);
+        if (rows == 0) {
+            throw new IllegalStateException("支付失败");
+        }
+    }
+
     // BeanUtils 转换方法（特殊字段已由 MyBatis-Plus 自动填充或手动设置）
     private OrderListDto toListDto(Orders order) {
         OrderListDto dto = new OrderListDto();

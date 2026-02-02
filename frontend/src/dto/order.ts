@@ -8,22 +8,32 @@ export enum OrderStatus {
 }
 
 
+// 订单明细项
+export interface OrderItemDto {
+  id: number
+  productId: number
+  productTitle: string
+  price: number
+  quantity: number
+}
+
 // 订单数据传输对象
 export interface OrderDto {
   id: number
   orderNo: string
   buyerId: number
   sellerId: number
-  productId: number
-  productTitle?: string // 后端联表查询带回来
-  productImage?: string // 后端联表查询带回来
   totalPrice: number
-  orderStatus: OrderStatus
+  status: number  // 订单状态：1待支付 2待发货 3已发货 4已完成 5已取消
   receiverName: string
   receiverPhone: string
   receiverAddress: string
   trackingNo?: string
   createTime: string
+  payTime?: string
+  deliveryTime?: string
+  finishTime?: string
+  items?: OrderItemDto[]  // 订单明细（详情接口返回）
 }
 
 // 订单列表查询参数

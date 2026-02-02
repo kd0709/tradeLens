@@ -132,17 +132,20 @@ const isIndeterminate = computed(() => {
 const loadData = async () => {
   try {
     const res = await getCartList()
-    // 假设后端返回的数据符合 CartItemDto
-    cartList.value = res || []
+    // 后端返回CartListDto，需要转换为前端CartItemDto格式
+    cartList.value = (res || []).map((item: any) => ({
+      id: item.id,
+      productId: item.productId,
+      title: item.productTitle || '',
+      image: item.productImage || '',
+      price: Number(item.price),
+      quantity: item.quantity,
+      stock: 999,  // 后端没有返回库存，设为默认值
+      sellerName: ''  // 后端没有返回卖家名称
+    }))
   } catch (e) {
-    console.error(e)
-    // Mock 数据用于展示效果（因为还没写后端）
-    if (cartList.value.length === 0) {
-      cartList.value = [
-        { id: 101, productId: 1, title: 'iPhone 13 Pro 演示机', image: 'https://img14.360buyimg.com/n0/jfs/t1/202157/16/16309/86720/6178e246E9656839d/0861110825704a2c.jpg', price: 4500, quantity: 1, stock: 1, sellerName: '数码发烧友' },
-        { id: 102, productId: 3, title: 'Java编程思想', image: 'https://img14.360buyimg.com/n0/jfs/t1/1867/26/11488/146050/5bd04183E00388701/374528c3194073f1.jpg', price: 45, quantity: 2, stock: 5, sellerName: '学霸小明' }
-      ]
-    }
+    console.error('加载购物车失败:', e)
+    cartList.value = []
   }
 }
 

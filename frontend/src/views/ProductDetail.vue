@@ -102,8 +102,8 @@ import { ElMessage } from 'element-plus'
 import { Star, ShoppingCart } from '@element-plus/icons-vue'
 import { getProductDetail } from '@/api/product'
 import { addToCart } from '@/api/cart'
+import { toggleFavorite } from '@/api/favorite'
 import type { ProductDto } from '@/dto/product'
-// 如果你有 cartStore 可以在这里导入
 
 const route = useRoute()
 const router = useRouter()
@@ -133,9 +133,10 @@ const loadDetail = async () => {
   loading.value = true
   try {
     const res = await getProductDetail(id)
-    // 假设后端直接返回对象，如果是 { data: ... } 结构请调整
-    // 此处兼容 mock 数据
-    product.value = res as any 
+    product.value = res as ProductDto
+    
+    // 设置收藏状态（后端返回isFavorited字段）
+    isLiked.value = (product.value as any).isFavorited || false
     
     // 初始化主图
     if (product.value?.images && product.value.images.length > 0) {
@@ -176,9 +177,16 @@ const handleAddToCart = async () => {
   }
 }
 
-const toggleLike = () => {
-  isLiked.value = !isLiked.value
-  ElMessage.success(isLiked.value ? '收藏成功' : '已取消收藏')
+const toggleLike = async () => {
+  if (!product.value) return
+  try {
+    const newStatus = await toggleFavorite(product.value.id)
+    isLiked.value = newStatus
+    ElMessage.success(newStatus ? '收藏成功' : '已取消收藏')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('操作失败')
+  }
 }
 
 onMounted(() => {

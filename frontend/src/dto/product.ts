@@ -32,7 +32,7 @@ export interface ProductQuery {
 // 分页响应结构
 export interface PageResult<T> {
   total: number
-  records: T[]
+  list: T[]
 }
 
 // 发布商品 DTO

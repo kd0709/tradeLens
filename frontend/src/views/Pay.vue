@@ -25,9 +25,9 @@
             <span class="label">收货信息：</span>
             <span class="val">{{ order.receiverName }} {{ order.receiverPhone }}</span>
           </div>
-          <div class="row">
+          <div class="row" v-if="order.items && order.items.length > 0">
             <span class="label">商品名称：</span>
-            <span class="val">{{ order.productTitle || '闲置商品' }}</span>
+            <span class="val">{{ order.items[0].productTitle || '闲置商品' }}</span>
           </div>
         </div>
 
@@ -91,11 +91,11 @@ const paying = ref(false)
 
 // 加载订单信息
 const loadOrder = async () => {
-  const id = Number(route.params.id)
-  if (!id) return
+  const orderNo = route.params.id as string  // 后端使用orderNo而非id
+  if (!orderNo) return
   try {
-    order.value = await getOrderDetail(id)
-    if (order.value.orderStatus !== 1) {
+    order.value = await getOrderDetail(orderNo)
+    if (order.value.status !== 1) {  // 使用status而非orderStatus
       ElMessage.warning('该订单无需支付')
       router.replace('/user')
     }
@@ -107,18 +107,19 @@ const handleConfirmPay = async () => {
   if (!order.value) return
   paying.value = true
   
-  // 模拟网络延迟 1秒
-  setTimeout(async () => {
-    try {
-      await payOrder(order.value!.id)
-      ElMessage.success('支付成功！')
-      router.replace('/user') // 回到用户中心查看状态
-    } catch (e) {
-      console.error(e)
-    } finally {
-      paying.value = false
-    }
-  }, 1000)
+  try {
+    // 后端需要orderNo和payType
+    await payOrder({ 
+      orderNo: order.value.orderNo, 
+      payType: payType.value 
+    })
+    ElMessage.success('支付成功！')
+    router.replace('/user') // 回到用户中心查看状态
+  } catch (e) {
+    console.error(e)
+  } finally {
+    paying.value = false
+  }
 }
 
 onMounted(() => {

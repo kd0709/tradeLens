@@ -22,7 +22,7 @@
           <span 
             v-for="cat in categories" 
             :key="cat.id" 
-            :class="['cat-item', { active: queryParams.categoryId === cat.id }]"
+            :class="['cat-item', { active: (queryParams.categoryId === cat.id) || (cat.id === 0 && !queryParams.categoryId) }]"
             @click="handleCategoryChange(cat.id)"
           >
             {{ cat.name }}
@@ -61,7 +61,7 @@
         @click="goToDetail(item.id)"
       >
         <div class="image-wrapper">
-          <img :src="item.images[0]" :alt="item.title" loading="lazy" />
+          <img :src="(item.images && item.images.length > 0) ? item.images[0] : 'https://via.placeholder.com/300'" :alt="item.title" loading="lazy" />
           <div class="condition-tag" v-if="item.conditionLevel">
             {{ getConditionText(item.conditionLevel) }}
           </div>
@@ -96,7 +96,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
-import { getProductList } from '@/api/product'
+import { getProductList, getCategoryList } from '@/api/product'
 import type { ProductDto, ProductQuery } from '@/dto/product'
 
 const router = useRouter()
@@ -111,7 +111,7 @@ const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 const queryParams = reactive<ProductQuery>({
   page: 1,
   size: 20,
-  categoryId: 0,
+  categoryId: undefined,  // 初始化为undefined，不传则查询所有分类
   keyword: '',
   sort: undefined
 })
@@ -123,14 +123,10 @@ const banners = [
   { title: '书香传递', desc: '让知识循环起来', img: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80' }
 ]
 
-// 模拟分类 (对应后端ID)
-const categories = [
-  { id: 0, name: '全部' },
-  { id: 1, name: '数码产品' },
-  { id: 2, name: '书籍教材' },
-  { id: 3, name: '生活用品' },
-  { id: 4, name: '美妆护肤' },
-]
+// 分类列表（从后端获取）
+const categories = ref<Array<{ id: number; name: string }>>([
+  { id: 0, name: '全部' }  // 默认"全部"选项
+])
 
 // 监听路由参数变化 (处理顶部搜索框)
 watch(
@@ -141,14 +137,63 @@ watch(
   }
 )
 
-// 加载数据
+// 加载分类数据
+const loadCategories = async () => {
+  try {
+    const catList = await getCategoryList()
+    // 将后端分类数据转换为前端格式，并在前面添加"全部"选项
+    categories.value = [
+      { id: 0, name: '全部' },
+      ...catList.map((cat: any) => ({ id: cat.id, name: cat.name }))
+    ]
+  } catch (error) {
+    console.error('加载分类失败:', error)
+  }
+}
+
+// 加载商品数据
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getProductList(queryParams)
-    productList.value = res.records || []
+    // 构建查询参数，如果categoryId为0或undefined，则不传categoryId参数
+    const params: any = {
+      page: queryParams.page,
+      size: queryParams.size,
+      keyword: queryParams.keyword || undefined,
+      sort: queryParams.sort
+    }
+    // 只有当categoryId存在且不为0时才传递
+    if (queryParams.categoryId && queryParams.categoryId !== 0) {
+      params.categoryId = queryParams.categoryId
+    }
+    
+    const res = await getProductList(params)
+    console.log('产品列表响应:', res)
+    
+    // 转换后端数据格式为前端期望的格式
+    productList.value = (res.list || []).map((item: any) => ({
+      id: item.id,
+      userId: 0,  // ProductListDto中没有userId，需要从详情获取或设为0
+      categoryId: 0,  // ProductListDto中没有categoryId
+      title: item.title,
+      description: '',  // ProductListDto中没有description
+      price: Number(item.price),
+      quantity: 1,  // ProductListDto中没有quantity
+      conditionLevel: item.conditionLevel,
+      negotiable: 1,
+      productStatus: 2,  // 列表接口只返回上架商品
+      images: item.mainImage ? [item.mainImage] : [],  // 转换为数组
+      viewCount: item.viewCount || 0,
+      seller: {
+        username: '',
+        nickname: item.sellerNickname || '匿名',
+        avatar: '',
+        token: ''
+      },
+      createTime: item.createTime
+    }))
   } catch (error) {
-    console.error(error)
+    console.error('加载商品列表失败:', error)
   } finally {
     loading.value = false
   }
@@ -156,7 +201,9 @@ const loadData = async () => {
 
 // 交互逻辑
 const handleCategoryChange = (id: number) => {
-  queryParams.categoryId = id
+  // 如果选择"全部"（id为0），则设置为undefined，不传categoryId参数
+  queryParams.categoryId = id === 0 ? undefined : id
+  queryParams.page = 1  // 切换分类时重置到第一页
   loadData()
 }
 
@@ -196,11 +243,13 @@ const highlightKeyword = (title: string) => {
   return title.replace(reg, (match) => `<span style="color: #10b981; font-weight:bold">${match}</span>`)
 }
 
-onMounted(() => {
+onMounted(async () => {
   // 初始化读取 URL 参数
   if (route.query.q) {
     queryParams.keyword = route.query.q as string
   }
+  // 先加载分类，再加载商品
+  await loadCategories()
   loadData()
 })
 

@@ -134,6 +134,11 @@ public interface ProductMapper extends BaseMapper<Product> {
 
     @Select("SELECT image_url FROM tradelens.product_image WHERE product_id = #{productId} ORDER BY sort ASC")
     List<String> getProductImageUrls(@Param("productId") Long productId);
+
+    /**
+     * 删除商品的所有图片记录
+     */
+    int deleteProductImages(@Param("productId") Long productId);
 }
 
 

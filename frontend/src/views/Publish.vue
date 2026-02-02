@@ -78,11 +78,13 @@
           </el-row>
 
           <el-form-item label="分类" prop="categoryId">
-             <el-select v-model="form.categoryId" placeholder="选择分类" style="width: 100%">
-              <el-option label="数码产品" :value="1" />
-              <el-option label="书籍教材" :value="2" />
-              <el-option label="生活用品" :value="3" />
-              <el-option label="美妆护肤" :value="4" />
+             <el-select v-model="form.categoryId" placeholder="选择分类" style="width: 100%" @focus="loadCategories">
+              <el-option 
+                v-for="cat in categories" 
+                :key="cat.id" 
+                :label="cat.name" 
+                :value="cat.id" 
+              />
             </el-select>
           </el-form-item>
 
@@ -99,18 +101,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, UploadRequestOptions, UploadUserFile } from 'element-plus'
 import { uploadFile } from '@/api/common'
-import { publishProduct } from '@/api/product'
+import { publishProduct, getCategoryList } from '@/api/product'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const fileList = ref<UploadUserFile[]>([])
+const categories = ref<Array<{ id: number; name: string }>>([])
 
 // 表单数据
 const form = reactive({
@@ -162,6 +165,21 @@ const handleRemove = (file: any) => {
   console.log('Remove', file)
 }
 
+// 加载分类列表
+const loadCategories = async () => {
+  if (categories.value.length > 0) return  // 已加载过
+  try {
+    const catList = await getCategoryList()
+    categories.value = catList.map((cat: any) => ({ id: cat.id, name: cat.name }))
+  } catch (error) {
+    console.error('加载分类失败:', error)
+  }
+}
+
+onMounted(() => {
+  loadCategories()
+})
+
 // 提交表单
 const submitForm = async () => {
   if (!formRef.value) return
@@ -171,11 +189,16 @@ const submitForm = async () => {
       submitting.value = true
       try {
         // 1. 提取上传成功的图片 URL
-        // 注意：实际项目中 uploadFile 返回的 url 需要正确映射
-        // 这里假设 response 就是 url。如果使用的是 mock，需确保 uploadFile 返回有效字符串
+        // uploadFile返回UploadDto对象，response字段存储url字符串
         const imageUrls = fileList.value.map(file => {
-          return file.response as string || (file.url as string)
-        }).filter(url => url)
+          // file.response可能是字符串（url）或对象（UploadDto），需要提取url字段
+          if (typeof file.response === 'string') {
+            return file.response
+          } else if (file.response && typeof file.response === 'object') {
+            return (file.response as any).url || file.response
+          }
+          return file.url as string
+        }).filter(url => url && url.trim())
 
         if (imageUrls.length === 0) {
           ElMessage.warning('图片正在上传中，请稍后...')

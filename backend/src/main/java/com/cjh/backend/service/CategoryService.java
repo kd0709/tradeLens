@@ -1,7 +1,11 @@
 package com.cjh.backend.service;
 
+import com.cjh.backend.dto.Category.CategoryDto;
+import com.cjh.backend.dto.Category.CategoryTreeDto;
 import com.cjh.backend.entity.Category;
 import com.baomidou.mybatisplus.extension.service.IService;
+
+import java.util.List;
 
 /**
 * @author 45209
@@ -10,4 +14,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 */
 public interface CategoryService extends IService<Category> {
 
+    /**
+     * 获取分类树
+     */
+    List<CategoryTreeDto> getCategoryTree();
+
+    /**
+     * 获取分类列表（平铺）
+     */
+    List<CategoryDto> getCategoryList();
 }

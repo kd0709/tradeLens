@@ -7,6 +7,7 @@ import com.cjh.backend.common.CurrentUser;
 import com.cjh.backend.dto.Orders.CreateOrderDto;
 import com.cjh.backend.dto.Orders.OrderDetailDto;
 import com.cjh.backend.dto.Orders.OrderListDto;
+import com.cjh.backend.dto.Orders.OrderPayDto;
 import com.cjh.backend.entity.Orders;
 import com.cjh.backend.service.OrdersService;
 import com.cjh.backend.utils.Result;
@@ -46,28 +47,46 @@ public class OrdersController {
      * 买家订单列表
      */
     @GetMapping("/buyer/list")
-    public Result<IPage<OrderListDto>> listBuyerOrders(
+    public Result<com.cjh.backend.dto.PageDto<OrderListDto>> listBuyerOrders(
             @CurrentUser Long userId,
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") int current,
             @RequestParam(defaultValue = "10") int size) {
         log.info("用户 {} 查询买家订单列表，状态: {}, 当前页: {}, 每页: {}", userId, status, current, size);
         Page<Orders> page = new Page<>(current, size);
-        return Result.success(orderService.listBuyerOrders(page, userId, status));
+        IPage<OrderListDto> iPage = orderService.listBuyerOrders(page, userId, status);
+        
+        // 转换为PageDto格式
+        com.cjh.backend.dto.PageDto<OrderListDto> pageDto = new com.cjh.backend.dto.PageDto<>();
+        pageDto.setList(iPage.getRecords());
+        pageDto.setTotal(iPage.getTotal());
+        pageDto.setPage((int) iPage.getCurrent());
+        pageDto.setSize((int) iPage.getSize());
+        
+        return Result.success(pageDto);
     }
 
     /**
      * 卖家订单列表
      */
     @GetMapping("/seller/list")
-    public Result<IPage<OrderListDto>> listSellerOrders(
+    public Result<com.cjh.backend.dto.PageDto<OrderListDto>> listSellerOrders(
             @CurrentUser Long userId,
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") int current,
             @RequestParam(defaultValue = "10") int size) {
         log.info("用户 {} 查询卖家订单列表，状态: {}, 当前页: {}, 每页: {}", userId, status, current, size);
         Page<Orders> page = new Page<>(current, size);
-        return Result.success(orderService.listSellerOrders(page, userId, status));
+        IPage<OrderListDto> iPage = orderService.listSellerOrders(page, userId, status);
+        
+        // 转换为PageDto格式
+        com.cjh.backend.dto.PageDto<OrderListDto> pageDto = new com.cjh.backend.dto.PageDto<>();
+        pageDto.setList(iPage.getRecords());
+        pageDto.setTotal(iPage.getTotal());
+        pageDto.setPage((int) iPage.getCurrent());
+        pageDto.setSize((int) iPage.getSize());
+        
+        return Result.success(pageDto);
     }
 
     /**
@@ -136,6 +155,23 @@ public class OrdersController {
         } catch (Exception e) {
             log.error("用户 {} 发货失败，订单号: {}", userId, orderNo, e);
             return Result.fail("发货失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 支付订单（模拟支付回调）
+     */
+    @PostMapping("/pay")
+    public Result<String> payOrder(
+            @CurrentUser Long userId,
+            @Valid @RequestBody OrderPayDto dto) {
+        log.info("用户 {} 支付订单，订单号: {}, 支付方式: {}", userId, dto.getOrderNo(), dto.getPayType());
+        try {
+            orderService.payOrder(userId, dto.getOrderNo(), dto.getPayType());
+            return Result.success("支付成功");
+        } catch (Exception e) {
+            log.error("用户 {} 支付订单失败，订单号: {}", userId, dto.getOrderNo(), e);
+            return Result.fail("支付失败：" + e.getMessage());
         }
     }
 }

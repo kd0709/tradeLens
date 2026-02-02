@@ -258,10 +258,15 @@ const handleSubmit = async () => {
       })
     })
 
-    await Promise.all(promises)
+    const results = await Promise.all(promises)
     
-    ElMessage.success(`成功创建 ${productList.value.length} 个订单！`)
-    router.replace('/user')
+    // 如果只创建了一个订单，跳转到支付页面；多个订单则跳转到用户中心
+    if (results.length === 1 && results[0]?.orderNo) {
+      router.replace(`/pay/${results[0].orderNo}`)
+    } else {
+      ElMessage.success(`成功创建 ${productList.value.length} 个订单！`)
+      router.replace('/user')
+    }
   } catch (e) {
     console.error(e)
     // ElMessage 由拦截器处理

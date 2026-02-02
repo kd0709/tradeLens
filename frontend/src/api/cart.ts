@@ -18,5 +18,5 @@ export function updateCartItem(id: number, quantity: number): Promise<void> {
 
 // 删除购物车商品 (支持批量)
 export function deleteCartItems(ids: number[]): Promise<void> {
-  return request.delete('/api/cart/delete', { data: ids }) // Axios DELETE 传 body 需要包在 data 里
+  return request.delete('/api/cart/delete', { data: ids }) // Axios DELETE 传 body，后端接收 List<Long>
 }

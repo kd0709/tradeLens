@@ -159,4 +159,28 @@ public class ProductController {
             return Result.fail("获取商品详情失败");
         }
     }
+
+    /**
+     * 编辑商品
+     */
+    @PutMapping
+    public Result<Void> updateProduct(
+            @RequestBody @Valid ProductUpdateDto req,
+            @CurrentUser Long userId) {
+        log.info("用户 {} 编辑商品：productId = {}", userId, req.getId());
+        try {
+            boolean success = productService.updateProduct(userId, req);
+            if (!success) {
+                return Result.fail("编辑失败，商品不存在或无权限");
+            }
+            log.info("用户 {} 编辑商品成功：productId = {}", userId, req.getId());
+            return Result.success(null, "编辑成功");
+        } catch (IllegalArgumentException e) {
+            log.warn("用户 {} 编辑商品失败：{}", userId, e.getMessage());
+            return Result.fail(400, e.getMessage());
+        } catch (Exception e) {
+            log.error("用户 {} 编辑商品异常", userId, e);
+            return Result.fail("编辑商品失败");
+        }
+    }
 }

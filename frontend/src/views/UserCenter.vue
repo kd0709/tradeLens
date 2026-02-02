@@ -28,8 +28,8 @@
               <div v-for="order in buyerOrders" :key="order.id" class="order-item">
                 <div class="header">
                   <span class="no">订单号：{{ order.orderNo }}</span>
-                  <span class="status" :class="getStatusClass(order.orderStatus)">
-                    {{ getStatusText(order.orderStatus) }}
+                  <span class="status" :class="getStatusClass(order.status)">
+                    {{ getStatusText(order.status) }}
                   </span>
                 </div>
                 <div class="content">
@@ -38,12 +38,12 @@
                     <div class="time">下单时间：{{ formatDate(order.createTime) }}</div>
                   </div>
                     <div class="actions">
-                        <el-button v-if="order.orderStatus === 1" type="primary" size="small" @click="handlePay(order.id)">去支付</el-button>
-                        <el-button v-if="order.orderStatus === 3" type="success" size="small" @click="handleReceive(order.id)">确认收货</el-button>
-                        <el-button v-if="[1,2].includes(order.orderStatus)" size="small" @click="handleCancel(order.id)">取消订单</el-button>
+                        <el-button v-if="order.status === 1" type="primary" size="small" @click="handlePay(order)">去支付</el-button>
+                        <el-button v-if="order.status === 3" type="success" size="small" @click="handleReceive(order)">确认收货</el-button>
+                        <el-button v-if="[1,2].includes(order.status)" size="small" @click="handleCancel(order)">取消订单</el-button>
                         
                         <el-button 
-                            v-if="order.orderStatus === 4" 
+                            v-if="order.status === 4" 
                             size="small" 
                             @click="openCommentDialog(order)"
                         >
@@ -61,8 +61,8 @@
               <div v-for="order in sellerOrders" :key="order.id" class="order-item">
                 <div class="header">
                   <span class="no">订单号：{{ order.orderNo }}</span>
-                  <span class="status" :class="getStatusClass(order.orderStatus)">
-                    {{ getStatusText(order.orderStatus) }}
+                  <span class="status" :class="getStatusClass(order.status)">
+                    {{ getStatusText(order.status) }}
                   </span>
                 </div>
                 <div class="content">
@@ -71,7 +71,7 @@
                     <div class="address">发给：{{ order.receiverName }} ({{ order.receiverAddress }})</div>
                   </div>
                   <div class="actions">
-                    <el-button v-if="order.orderStatus === 2" type="primary" size="small" @click="openDeliverDialog(order)">去发货</el-button>
+                    <el-button v-if="order.status === 2" type="primary" size="small" @click="openDeliverDialog(order)">去发货</el-button>
                   </div>
                 </div>
               </div>
@@ -216,7 +216,6 @@ const addressForm = reactive<AddressDto>({
 const commentDialogVisible = ref(false)
 const commentForm = reactive({
   orderId: 0,
-  productId: 0,
   score: 5,
   content: ''
 })
@@ -224,7 +223,6 @@ const commentForm = reactive({
 // 打开评价弹窗
 const openCommentDialog = (order: OrderDto) => {
   commentForm.orderId = order.id
-  commentForm.productId = order.productId // 确保 OrderDto 中有 productId 字段
   commentForm.score = 5
   commentForm.content = ''
   commentDialogVisible.value = true
@@ -257,41 +255,45 @@ const formatDate = (str: string) => str ? str.replace('T', ' ').split('.')[0] : 
 
 // 加载数据
 const loadData = async () => {
-  // 加载买家订单
-  const res1 = await getBuyerOrders({ page: 1, size: 20 })
-  buyerOrders.value = res1.records
-  
-  // 加载卖家订单
-  const res2 = await getSellerOrders({ page: 1, size: 20 })
-  sellerOrders.value = res2.records
+  try {
+    // 加载买家订单（后端返回PageDto格式，包含list字段）
+    const res1 = await getBuyerOrders({ page: 1, size: 20 })
+    buyerOrders.value = res1.list || []
+    
+    // 加载卖家订单
+    const res2 = await getSellerOrders({ page: 1, size: 20 })
+    sellerOrders.value = res2.list || []
 
-  // 加载我的发布
-  const res3 = await getMyProducts({ page: 1, size: 20 })
-  myProducts.value = res3.records
+    // 加载我的发布（后端返回PageDto格式）
+    const res3 = await getMyProducts({ page: 1, size: 20 })
+    myProducts.value = res3.list || []
 
-  // 加载地址
-  addressList.value = await getAddressList()
+    // 加载地址
+    addressList.value = await getAddressList()
+  } catch (error) {
+    console.error('加载数据失败:', error)
+  }
 }
 
 // 订单操作
-const handlePay = (id: number) => {
-  // 跳转到收银台页面
-  router.push(`/pay/${id}`)
+const handlePay = (order: OrderDto) => {
+  // 跳转到收银台页面，使用orderNo
+  router.push(`/pay/${order.orderNo}`)
 }
 
-const handleCancel = async (id: number) => {
+const handleCancel = async (order: OrderDto) => {
   try {
     await ElMessageBox.confirm('确定取消该订单吗?', '提示', { type: 'warning' })
-    await cancelOrder(id)
+    await cancelOrder(order.orderNo)  // 使用orderNo而非id
     ElMessage.success('订单已取消')
     loadData()
   } catch (e) { console.error(e) }
 }
 
-const handleReceive = async (id: number) => {
+const handleReceive = async (order: OrderDto) => {
   try {
     await ElMessageBox.confirm('确认收到货物了吗?', '提示', { type: 'success' })
-    await confirmOrder(id)
+    await confirmOrder(order.orderNo)  // 使用orderNo而非id
     ElMessage.success('交易完成！')
     loadData()
   } catch (e) { console.error(e) }

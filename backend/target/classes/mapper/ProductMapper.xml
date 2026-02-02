@@ -157,4 +157,9 @@
             AND p.condition_level = #{condition}
         </if>
     </select>
+
+    <delete id="deleteProductImages">
+        DELETE FROM tradelens.product_image
+        WHERE product_id = #{productId}
+    </delete>
 </mapper>

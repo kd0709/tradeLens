@@ -50,4 +50,9 @@ public interface OrdersService extends IService<Orders> {
      * 卖家发货
      */
     void deliverOrder(Long sellerId, String orderNo, String trackingNo);
+
+    /**
+     * 支付订单（模拟支付回调）
+     */
+    void payOrder(Long userId, String orderNo, String payType);
 }

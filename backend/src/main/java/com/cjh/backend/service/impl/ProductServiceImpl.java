@@ -143,6 +143,53 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     public void incrementViewCount(Long productId) {
         productMapper.incrementViewCount(productId);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateProduct(Long userId, ProductUpdateDto req) {
+        // 1. 校验商品是否存在且属于当前用户
+        Product existingProduct = productMapper.selectById(req.getId());
+        if (existingProduct == null || !existingProduct.getUserId().equals(userId)) {
+            return false;
+        }
+
+        // 2. 校验商品状态（只有待审核或上架状态可编辑）
+        if (existingProduct.getProductStatus() != 1 && existingProduct.getProductStatus() != 2) {
+            throw new IllegalArgumentException("商品状态不允许编辑");
+        }
+
+        // 3. 更新商品基本信息
+        Product product = new Product();
+        BeanUtils.copyProperties(req, product);
+        product.setId(req.getId());
+        // 不更新userId和状态
+        product.setUserId(null);
+        product.setProductStatus(null);
+        product.setViewCount(null);
+        product.setCreateTime(null);
+
+        int rows = productMapper.updateById(product);
+        if (rows == 0) {
+            return false;
+        }
+
+        // 4. 更新图片（先删除旧图片，再插入新图片）
+        if (req.getImages() != null) {
+            // 删除旧图片
+            productMapper.deleteProductImages(req.getId());
+            // 插入新图片
+            for (int i = 0; i < req.getImages().size(); i++) {
+                ProductImage image = new ProductImage();
+                image.setProductId(req.getId());
+                image.setImageUrl(req.getImages().get(i));
+                image.setIsMain(i == 0 ? 1 : 0);
+                image.setSort(i);
+                productMapper.insertProductImage(image);
+            }
+        }
+
+        return true;
+    }
 }
 
 

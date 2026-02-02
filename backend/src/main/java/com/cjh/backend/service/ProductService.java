@@ -30,4 +30,9 @@ public interface ProductService extends IService<Product> {
 
     void incrementViewCount(Long productId);
 
+    /**
+     * 编辑商品
+     */
+    boolean updateProduct(Long userId, ProductUpdateDto req);
+
 }
