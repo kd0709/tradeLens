@@ -12,8 +12,8 @@
         <div class="gallery-section">
           <div class="main-image">
             <el-image 
-              :src="currentImage" 
-              :preview-src-list="product.images"
+              :src="getFullImageUrl(currentImage)" 
+              :preview-src-list="product.images.map(img => getFullImageUrl(img))"
               fit="cover"
               class="img-display"
             />
@@ -25,7 +25,7 @@
               :class="['thumb-item', { active: currentImage === img }]"
               @mouseenter="currentImage = img"
             >
-              <img :src="img" alt="缩略图" />
+              <img :src="getFullImageUrl(img)" alt="缩略图" />
             </div>
           </div>
         </div>
@@ -49,7 +49,7 @@
           </div>
 
           <div class="seller-card">
-            <el-avatar :size="48" :src="product.seller?.avatar || defaultAvatar" />
+            <el-avatar :size="48" :src="getFullImageUrl(product.seller?.avatar)" />
             <div class="seller-info">
               <div class="name">{{ product.seller?.nickname || '匿名卖家' }}</div>
               <div class="desc">信用极好 · 回复快</div>
@@ -99,11 +99,11 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Star, ShoppingCart } from '@element-plus/icons-vue'
 import { getProductDetail } from '@/api/product'
 import { addToCart } from '@/api/cart'
 import { toggleFavorite } from '@/api/favorite'
 import type { ProductDto } from '@/dto/product'
+import { getFullImageUrl } from '@/utils/image'
 
 const route = useRoute()
 const router = useRouter()
@@ -111,7 +111,6 @@ const loading = ref(false)
 const product = ref<ProductDto | null>(null)
 const currentImage = ref('')
 const isLiked = ref(false)
-const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
 // 获取成色文本
 const getConditionText = (level: number) => {
@@ -140,7 +139,7 @@ const loadDetail = async () => {
     
     // 初始化主图
     if (product.value?.images && product.value.images.length > 0) {
-      currentImage.value = product.value.images[0]
+      currentImage.value = getFullImageUrl(product.value.images[0])
     }
   } catch (error) {
     console.error(error)
@@ -151,7 +150,6 @@ const loadDetail = async () => {
 }
 
 // 购买逻辑
-// src/views/ProductDetail.vue 中的 handleBuy 方法
 const handleBuy = () => {
   if (!product.value) return
   // 跳转到下单页，带上 productId
@@ -164,16 +162,11 @@ const handleBuy = () => {
 // 加入购物车
 const handleAddToCart = async () => {
   if (!product.value) return
-  // 判断是否登录
-  // const token = ... 
-  
   try {
     await addToCart({ productId: product.value.id, quantity: 1 })
     ElMessage.success('已加入购物车')
   } catch (e) {
     console.error(e)
-    // 如果没有后端，这里可能会报错。
-    // 为了演示，你可以暂时在这里写一个 ElMessage.success('（演示）已加入购物车')
   }
 }
 

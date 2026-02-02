@@ -3,12 +3,14 @@ import type { AxiosInstance } from 'axios'
 
 import { ElMessage } from 'element-plus'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 const request: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
 })
+
+
 
 // 请求拦截器
 request.interceptors.request.use(

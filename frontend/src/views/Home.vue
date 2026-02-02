@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     
-    <div class="banner-section">
+    <div class="banner-section" v-if="banners.length > 0">
       <div class="container">
         <el-carousel :interval="4000" type="card" height="300px">
           <el-carousel-item v-for="(item, index) in banners" :key="index">
@@ -47,7 +47,8 @@
             <el-icon class="icon">
               <CaretTop v-if="queryParams.sort === 'price_asc'" />
               <CaretBottom v-else-if="queryParams.sort === 'price_desc'" />
-              <d-caret v-else /> </el-icon>
+              <d-caret v-else /> 
+            </el-icon>
           </span>
         </div>
       </div>
@@ -61,7 +62,11 @@
         @click="goToDetail(item.id)"
       >
         <div class="image-wrapper">
-          <img :src="(item.images && item.images.length > 0) ? item.images[0] : 'https://via.placeholder.com/300'" :alt="item.title" loading="lazy" />
+          <img 
+            :src="getFullImageUrl(item.mainImage)" 
+            :alt="item.title" 
+            loading="lazy" 
+          />
           <div class="condition-tag" v-if="item.conditionLevel">
             {{ getConditionText(item.conditionLevel) }}
           </div>
@@ -74,8 +79,8 @@
             <span class="view-count">{{ item.viewCount }}人看过</span>
           </div>
           <div class="seller-row">
-            <el-avatar :size="20" :src="item.seller?.avatar || defaultAvatar" />
-            <span class="name">{{ item.seller?.nickname || '匿名' }}</span>
+            <el-avatar :size="20" :src="getFullImageUrl(item.sellerAvatar) || defaultAvatar" />
+            <span class="name">{{ item.sellerNickname || '匿名' }}</span>
             <span class="time">{{ formatTime(item.createTime) }}</span>
           </div>
         </div>
@@ -98,51 +103,35 @@ import { useRouter, useRoute } from 'vue-router'
 import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
 import { getProductList } from '@/api/product'
 import { getCategoryList } from '@/api/category'
-import type { ProductDto, ProductQuery } from '@/dto/product'
+import { getFullImageUrl } from '@/utils/image' // 确保你已创建此工具文件
+import type { ProductQuery } from '@/dto/product'
 
 const router = useRouter()
 const route = useRoute()
 
-// 状态
+// --- 状态定义 ---
 const loading = ref(false)
-const productList = ref<ProductDto[]>([])
+const productList = ref<any[]>([]) // 直接使用后端返回的列表对象
+const categories = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '全部' }])
+const isSticky = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+const banners = ref<any[]>([]) // 模拟数据已删除，预留接口位置
 
-// 查询参数
+// --- 查询参数 ---
 const queryParams = reactive<ProductQuery>({
   page: 1,
   size: 20,
-  categoryId: undefined,  // 初始化为undefined，不传则查询所有分类
+  categoryId: undefined,
   keyword: '',
   sort: undefined
 })
 
-// 模拟 Banner 数据
-const banners = [
-  { title: '毕业季 · 闲置清仓', desc: '学长学姐带不走的都在这里', img: 'https://images.unsplash.com/photo-1556740738-b6a63e27c4df?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80' },
-  { title: '数码发烧友', desc: '高性价比二手电子产品', img: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80' },
-  { title: '书香传递', desc: '让知识循环起来', img: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80' }
-]
-
-// 分类列表（从后端获取）
-const categories = ref<Array<{ id: number; name: string }>>([
-  { id: 0, name: '全部' }  // 默认"全部"选项
-])
-
-// 监听路由参数变化 (处理顶部搜索框)
-watch(
-  () => route.query.q,
-  (newVal) => {
-    queryParams.keyword = (newVal as string) || ''
-    loadData()
-  }
-)
+// --- 核心逻辑 ---
 
 // 加载分类数据
 const loadCategories = async () => {
   try {
     const catList = await getCategoryList()
-    // 将后端分类数据转换为前端格式，并在前面添加"全部"选项
     categories.value = [
       { id: 0, name: '全部' },
       ...catList.map((cat: any) => ({ id: cat.id, name: cat.name }))
@@ -156,43 +145,19 @@ const loadCategories = async () => {
 const loadData = async () => {
   loading.value = true
   try {
-    // 构建查询参数，如果categoryId为0或undefined，则不传categoryId参数
     const params: any = {
       page: queryParams.page,
       size: queryParams.size,
       keyword: queryParams.keyword || undefined,
       sort: queryParams.sort
     }
-    // 只有当categoryId存在且不为0时才传递
     if (queryParams.categoryId && queryParams.categoryId !== 0) {
       params.categoryId = queryParams.categoryId
     }
     
     const res = await getProductList(params)
-    console.log('产品列表响应:', res)
-    
-    // 转换后端数据格式为前端期望的格式
-    productList.value = (res.list || []).map((item: any) => ({
-      id: item.id,
-      userId: 0,  // ProductListDto中没有userId，需要从详情获取或设为0
-      categoryId: 0,  // ProductListDto中没有categoryId
-      title: item.title,
-      description: '',  // ProductListDto中没有description
-      price: Number(item.price),
-      quantity: 1,  // ProductListDto中没有quantity
-      conditionLevel: item.conditionLevel,
-      negotiable: 1,
-      productStatus: 2,  // 列表接口只返回上架商品
-      images: item.mainImage ? [item.mainImage] : [],  // 转换为数组
-      viewCount: item.viewCount || 0,
-      seller: {
-        username: '',
-        nickname: item.sellerNickname || '匿名',
-        avatar: '',
-        token: ''
-      },
-      createTime: item.createTime
-    }))
+    productList.value = res.list || [] 
+    console.log('加载商品列表:', productList.value)
   } catch (error) {
     console.error('加载商品列表失败:', error)
   } finally {
@@ -200,11 +165,11 @@ const loadData = async () => {
   }
 }
 
-// 交互逻辑
+// --- 交互处理 ---
+
 const handleCategoryChange = (id: number) => {
-  // 如果选择"全部"（id为0），则设置为undefined，不传categoryId参数
   queryParams.categoryId = id === 0 ? undefined : id
-  queryParams.page = 1  // 切换分类时重置到第一页
+  queryParams.page = 1
   loadData()
 }
 
@@ -213,13 +178,8 @@ const handleSortChange = (sortType: any) => {
   loadData()
 }
 
-// 价格排序切换 (默认->升->降->默认)
 const togglePriceSort = () => {
-  if (queryParams.sort === 'price_asc') {
-    queryParams.sort = 'price_desc'
-  } else {
-    queryParams.sort = 'price_asc'
-  }
+  queryParams.sort = queryParams.sort === 'price_asc' ? 'price_desc' : 'price_asc'
   loadData()
 }
 
@@ -227,7 +187,8 @@ const goToDetail = (id: number) => {
   router.push(`/product/${id}`)
 }
 
-// 工具函数
+// --- 辅助工具 ---
+
 const getConditionText = (level: number) => {
   return { 1: '全新', 2: '99新', 3: '9成新', 4: '8成新' }[level] || '二手'
 }
@@ -237,26 +198,25 @@ const formatTime = (timeStr: string) => {
   return timeStr.split('T')[0]
 }
 
-// 关键词高亮 (简单的 HTML 替换)
 const highlightKeyword = (title: string) => {
   if (!queryParams.keyword) return title
   const reg = new RegExp(queryParams.keyword, 'gi')
   return title.replace(reg, (match) => `<span style="color: #10b981; font-weight:bold">${match}</span>`)
 }
 
-onMounted(async () => {
-  // 初始化读取 URL 参数
-  if (route.query.q) {
-    queryParams.keyword = route.query.q as string
-  }
-  // 先加载分类，再加载商品
-  await loadCategories()
+// 监听搜索词变化
+watch(() => route.query.q, (newVal) => {
+  queryParams.keyword = (newVal as string) || ''
   loadData()
 })
 
-// 吸顶效果逻辑 (可选)
-const isSticky = ref(false)
-// 实际需配合 window.addEventListener('scroll') 使用，此处简化
+onMounted(async () => {
+  if (route.query.q) {
+    queryParams.keyword = route.query.q as string
+  }
+  await loadCategories()
+  loadData()
+})
 </script>
 
 <style scoped lang="scss">
