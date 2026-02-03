@@ -2,7 +2,16 @@
   <div class="user-center">
     <div class="container">
       <div class="user-profile-card">
-        <el-avatar :size="80" :src="getFullImageUrl(authStore.user.avatar) || defaultAvatar" />
+        <el-avatar
+          v-if="authStore.user"
+          :size="80"
+          :src="getFullImageUrl(authStore.user.avatar) || defaultAvatar"
+        />
+        <el-avatar
+          v-else
+          :size="80"
+          :src="defaultAvatar"
+        />
         <div class="info">
           <h2 class="nickname">{{ authStore.user?.nickname || '未登录用户' }}</h2>
           <p class="email">{{ authStore.user?.email || '暂无邮箱' }}</p>
@@ -71,20 +80,26 @@
               <el-empty v-if="myProducts.length === 0" description="暂无发布" />
               <div v-for="prod in myProducts" :key="prod.id" class="prod-item">
                 <el-image 
-                  :src="(prod.images && prod.images.length > 0) ? prod.images[0] : defaultAvatar" 
+                  :src="getFullImageUrl(prod.mainImage)" 
                   class="thumb" fit="cover" @click="router.push(`/product/${prod.id}`)"
                 />
                 <div class="detail">
                   <div class="main-info">
                     <div class="title">{{ prod.title }}</div>
                     <div class="price">¥ {{ prod.price }}</div>
-                    <el-tag size="small" :type="prod.productStatus === 2 ? 'success' : 'info'">
-                      {{ prod.productStatus === 2 ? '展示中' : '已下架' }}
+                    <el-tag :type="prod.productStatus === 2 ? 'success' : (prod.productStatus === 4 ? 'info' : 'warning')">
+                      {{ 
+                        prod.productStatus === 2 ? '展示中' : 
+                        (prod.productStatus === 4 ? '已售出' : '已下架') 
+                      }}
                     </el-tag>
                   </div>
                   <div class="prod-actions">
                     <el-button link type="primary" @click="handleToggleStatus(prod)">
-                      {{ prod.productStatus === 2 ? '下架' : '上架' }}
+                      {{ 
+                        prod.productStatus === 2 ? '展示中' : 
+                        (prod.productStatus === 4 ? '已售出' : '已下架') 
+                      }}
                     </el-button>
                     <el-button link type="danger" @click="handleDeleteProduct(prod.id)">删除</el-button>
                   </div>
@@ -165,14 +180,15 @@ import { getFullImageUrl } from '@/utils/image'
 
 // API 导入
 import { getBuyerOrders, getSellerOrders, deliverOrder, confirmOrder, cancelOrder } from '@/api/order'
-import { getAddressList, addAddress, deleteAddress, updateAddress } from '@/api/address'
+import { getMyAddressList, deleteAddress, updateAddress, createAddress } from '@/api/address'
 import { getMyProducts, updateProductStatus, deleteProduct } from '@/api/product'
 import { publishComment } from '@/api/comment'
 
 // DTO 导入
 import type { OrderDto } from '@/dto/order'
-import type { AddressDto } from '@/dto/address'
-import type { ProductDto } from '@/dto/product'
+import type { AddressDto, AddressUpdateDto } from '@/dto/address'
+import type { ProductStatusUpdateDto, ProductMyDto } from '@/dto/product'
+import type { CommentPublishDto } from '@/dto/comment'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -182,7 +198,7 @@ const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 // 数据列表
 const buyerOrders = ref<OrderDto[]>([])
 const sellerOrders = ref<OrderDto[]>([])
-const myProducts = ref<ProductDto[]>([])
+const myProducts = ref<ProductMyDto[]>([])
 const addressList = ref<AddressDto[]>([])
 
 // 弹窗状态
@@ -194,17 +210,30 @@ const isEditAddress = ref(false)
 // 表单
 const currentOrderNo = ref('')
 const trackingNo = ref('')
-const addressForm = reactive<AddressDto>({ id: undefined, receiverName: '', receiverPhone: '', province: '', city: '', district: '', detailAddress: '', isDefault: 0 })
-const commentForm = reactive({ orderId: 0, score: 5, content: '' })
+const addressForm = reactive<AddressUpdateDto>({ 
+  id: 0, 
+  receiverName: '', 
+  receiverPhone: '', 
+  province: '', 
+  city: '', 
+  district: '', 
+  detailAddress: '', 
+  isDefault: 0 
+})
+const commentForm = reactive<CommentPublishDto>({ 
+  orderId: 0, 
+  score: 5, 
+  content: '' 
+})
 
 // 加载数据
 const loadData = async () => {
   try {
     const [res1, res2, res3, resAddr] = await Promise.all([
-      getBuyerOrders({ page: 1, size: 20 }),
-      getSellerOrders({ page: 1, size: 20 }),
-      getMyProducts({ page: 1, size: 20 }),
-      getAddressList()
+      getBuyerOrders({ current: 1, size: 20 }),
+      getSellerOrders({ current: 1, size: 20 }),
+      getMyProducts({ current: 1, size: 20 }),
+      getMyAddressList()
     ])
     buyerOrders.value = (res1 as any)?.list || []
     sellerOrders.value = (res2 as any)?.list || []
@@ -232,7 +261,7 @@ const saveAddress = async () => {
       await updateAddress(addressForm)
       ElMessage.success('修改成功')
     } else {
-      await addAddress({ ...addressForm })
+      await createAddress({ ...addressForm })
       ElMessage.success('添加成功')
     }
     addressDialogVisible.value = false
@@ -249,17 +278,28 @@ const handleDeleteAddress = async (id: number) => {
 }
 
 // 商品逻辑
-const handleToggleStatus = async (prod: ProductDto) => {
-  const isOffshelf = prod.productStatus === 2
-  const actionText = isOffshelf ? '下架' : '上架'
+const handleToggleStatus = async (prod: any) => {
+  // 1. 语义化判断：当前是否处于“上架”状态
+  const isCurrentlyOnline = prod.productStatus === 2  
+  const actionText = isCurrentlyOnline ? '下架' : '上架'
+  const targetStatus = isCurrentlyOnline ? 3 : 2
+
+  console.log('当前状态:', prod.status, '目标状态:', targetStatus)
   try {
     await ElMessageBox.confirm(`确定要${actionText}该商品吗？`, '提示', { type: 'warning' })
-    await updateProductStatus({ ...prod, status: isOffshelf ? 3 : 2 })
+    
+    // 调用后端接口
+    await updateProductStatus({
+      id: prod.id,
+      status: targetStatus // 使用计算好的目标状态
+    })
+
     ElMessage.success(`${actionText}成功`)
     loadData()
-  } catch (e) {}
+  } catch (e) {
+    // 用户取消或请求失败处理
+  }
 }
-
 const handleDeleteProduct = async (id: number) => {
   try {
     await ElMessageBox.confirm('确定删除商品吗？', '警告', { type: 'error' })

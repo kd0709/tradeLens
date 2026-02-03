@@ -49,9 +49,9 @@ public class OrdersController {
     @GetMapping("/buyer/list")
     public Result<com.cjh.backend.dto.PageDto<OrderListDto>> listBuyerOrders(
             @CurrentUser Long userId,
-            @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") int current,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Integer status) {
         log.info("用户 {} 查询买家订单列表，状态: {}, 当前页: {}, 每页: {}", userId, status, current, size);
         Page<Orders> page = new Page<>(current, size);
         IPage<OrderListDto> iPage = orderService.listBuyerOrders(page, userId, status);
@@ -107,19 +107,37 @@ public class OrdersController {
     }
 
     /**
-     * 取消订单
+     * 支付订单（模拟支付回调）
      */
-    @PostMapping("/cancel/{orderNo}")
-    public Result<String> cancelOrder(
+    @PostMapping("/pay")
+    public Result<String> payOrder(
             @CurrentUser Long userId,
-            @PathVariable String orderNo) {
-        log.info("用户 {} 取消订单，订单号: {}", userId, orderNo);
+            @Valid @RequestBody OrderPayDto dto) {
+        log.info("用户 {} 支付订单，订单号: {}, 支付方式: {}", userId, dto.getOrderNo(), dto.getPayType());
         try {
-            orderService.cancelOrder(userId, orderNo);
-            return Result.success("订单已取消");
+            orderService.payOrder(userId, dto.getOrderNo(), dto.getPayType());
+            return Result.success("支付成功");
         } catch (Exception e) {
-            log.error("用户 {} 取消订单失败，订单号: {}", userId, orderNo, e);
-            return Result.fail("取消订单失败：" + e.getMessage());
+            log.error("用户 {} 支付订单失败，订单号: {}", userId, dto.getOrderNo(), e);
+            return Result.fail("支付失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 卖家发货
+     */
+    @PostMapping("/deliver")
+    public Result<String> deliverOrder(
+            @CurrentUser Long userId,
+            @RequestParam String orderNo,
+            @RequestParam String trackingNo) {
+        log.info("用户 {} 发货，订单号: {}, 物流单号: {}", userId, orderNo, trackingNo);
+        try {
+            orderService.deliverOrder(userId, orderNo, trackingNo);
+            return Result.success("发货成功");
+        } catch (Exception e) {
+            log.error("用户 {} 发货失败，订单号: {}", userId, orderNo, e);
+            return Result.fail("发货失败：" + e.getMessage());
         }
     }
 
@@ -140,38 +158,21 @@ public class OrdersController {
         }
     }
 
-    /**
-     * 卖家发货
-     */
-    @PostMapping("/deliver/{orderNo}")
-    public Result<String> deliverOrder(
-            @CurrentUser Long userId,
-            @PathVariable String orderNo,
-            @RequestParam String trackingNo) {
-        log.info("用户 {} 发货，订单号: {}, 物流单号: {}", userId, orderNo, trackingNo);
-        try {
-            orderService.deliverOrder(userId, orderNo, trackingNo);
-            return Result.success("发货成功");
-        } catch (Exception e) {
-            log.error("用户 {} 发货失败，订单号: {}", userId, orderNo, e);
-            return Result.fail("发货失败：" + e.getMessage());
-        }
-    }
 
     /**
-     * 支付订单（模拟支付回调）
+     * 取消订单
      */
-    @PostMapping("/pay")
-    public Result<String> payOrder(
+    @PostMapping("/cancel/{orderNo}")
+    public Result<String> cancelOrder(
             @CurrentUser Long userId,
-            @Valid @RequestBody OrderPayDto dto) {
-        log.info("用户 {} 支付订单，订单号: {}, 支付方式: {}", userId, dto.getOrderNo(), dto.getPayType());
+            @PathVariable String orderNo) {
+        log.info("用户 {} 取消订单，订单号: {}", userId, orderNo);
         try {
-            orderService.payOrder(userId, dto.getOrderNo(), dto.getPayType());
-            return Result.success("支付成功");
+            orderService.cancelOrder(userId, orderNo);
+            return Result.success("订单已取消");
         } catch (Exception e) {
-            log.error("用户 {} 支付订单失败，订单号: {}", userId, dto.getOrderNo(), e);
-            return Result.fail("支付失败：" + e.getMessage());
+            log.error("用户 {} 取消订单失败，订单号: {}", userId, orderNo, e);
+            return Result.fail("取消订单失败：" + e.getMessage());
         }
     }
 }

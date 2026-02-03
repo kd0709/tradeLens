@@ -54,7 +54,7 @@
         update_time = NOW()
         WHERE id = #{id}
         AND user_id = #{userId}
-        AND product_status IN (1, 2, 5)   <!-- 允许从 待审核/上架/下架 变更 -->
+        AND product_status IN (2, 3)   <!-- 允许从 上架/下架 变更 -->
         AND is_deleted = 0
     </update>
 

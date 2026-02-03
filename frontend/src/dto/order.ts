@@ -7,6 +7,21 @@ export enum OrderStatus {
   CANCELLED = 5 // 已取消
 }
 
+export interface CreateOrderDto {
+  productId: number
+  quantity: number
+  addressId: number
+}
+
+export interface OrderPayDto {
+  orderNo: string
+  payType: string
+}
+
+export interface OrderDeliverDto {
+  orderNo: string
+  trackingNo: string
+}
 
 // 订单明细项
 export interface OrderItemDto {
@@ -33,12 +48,12 @@ export interface OrderDto {
   payTime?: string
   deliveryTime?: string
   finishTime?: string
-  items?: OrderItemDto[]  // 订单明细（详情接口返回）
+  items: OrderItemDto[]  // 订单明细（详情接口返回）
 }
 
 // 订单列表查询参数
 export interface OrderQuery {
-  page: number
+  current: number
   size: number
   status?: number
 }

@@ -25,7 +25,7 @@ public class AddressController {
      * 获取我的所有收货地址列表
      */
     @GetMapping("/list")
-    public Result<List<AddressListDto>> listMyAddresses(@CurrentUser Long userId) {
+    public Result<List<AddressListDto>> getMyAddressList(@CurrentUser Long userId) {
         log.info("用户 {} 查询收货地址列表", userId);
         try {
             List<AddressListDto> addresses = addressService.listMyAddresses(userId);

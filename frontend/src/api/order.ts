@@ -1,14 +1,19 @@
 import request from './request'
-import type { OrderDto, OrderQuery } from '@/dto/order'
-import type { PageResult } from '@/dto/product'
+import type { OrderDto, OrderQuery , CreateOrderDto, OrderPayDto, OrderDeliverDto } from '@/dto/order'
+import type { PageResult } from '@/dto/common'
 
+
+// 创建订单 (保持不变)
+export function createOrder(data: CreateOrderDto): Promise<any> {
+  return request.post('/api/order/create', data)
+}
 
 
 // 订单列表接口（后端返回PageDto格式）
 export function getBuyerOrders(query: OrderQuery): Promise<PageResult<OrderDto>> {
   return request.get('/api/order/buyer/list', { 
     params: { 
-      current: query.page,  // 后端使用current作为页码参数
+      current: query.current,  // 后端使用current作为页码参数
       size: query.size,
       status: query.status 
     } 
@@ -18,42 +23,44 @@ export function getBuyerOrders(query: OrderQuery): Promise<PageResult<OrderDto>>
 export function getSellerOrders(query: OrderQuery): Promise<PageResult<OrderDto>> {
   return request.get('/api/order/seller/list', { 
     params: { 
-      current: query.page,  // 后端使用current作为页码参数
+      current: query.current,  
       size: query.size,
       status: query.status 
     } 
   })
 }
 
-// 修改详情接口，注意参数改为 orderNo
+// 订单详情
 export function getOrderDetail(orderNo: string): Promise<OrderDto> {
-  return request.get(`/api/order/detail/${orderNo}`) // 修正路径和参数
+  return request.get(`/api/order/detail/${orderNo}`) 
 }
 
-// 修改发货接口，适配后端 PathVariable + RequestParam
-export function deliverOrder(data: { orderNo: string; trackingNo: string }): Promise<void> {
-  return request.post(`/api/order/deliver/${data.orderNo}?trackingNo=${data.trackingNo}`)
+
+// 支付订单
+export function payOrder(data: OrderPayDto): Promise<void> {
+  return request.post('/api/order/pay', data)
 }
 
-// 修改确认收货
+// 订单发货
+export function deliverOrder(query: OrderDeliverDto): Promise<void> {
+  return request.post(`/api/order/deliver`, null ,{
+    params: { 
+      orderNo: query.orderNo,
+      trackingNo: query.trackingNo 
+    }
+  })
+}
+
+// 确认收货
 export function confirmOrder(orderNo: string): Promise<void> {
-  return request.post(`/api/order/receive/${orderNo}`) // 修正路径 confirm -> receive
+  return request.post(`/api/order/receive/${orderNo}`) 
 }
 
-// 修改取消订单
+// 取消订单
 export function cancelOrder(orderNo: string): Promise<void> {
   return request.post(`/api/order/cancel/${orderNo}`)
 }
 
 
-// 创建订单 (保持不变)
-export function createOrder(data: { productId: number; quantity: number; addressId: number }): Promise<any> {
-  return request.post('/api/order/create', data)
-}
-
-// 支付订单
-export function payOrder(data: { orderNo: string; payType: string }): Promise<void> {
-  return request.post('/api/order/pay', data)
-}
 
 

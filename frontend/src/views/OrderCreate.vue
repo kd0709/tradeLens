@@ -1,11 +1,11 @@
 <template>
   <div class="order-create-page">
     <div class="container" v-loading="loading">
-      
       <div class="page-header">
         <el-page-header @back="router.back()" content="确认订单" />
       </div>
 
+      <!-- 收货地址 -->
       <div class="section-card address-section">
         <div class="card-title">
           <span>收货地址</span>
@@ -13,10 +13,10 @@
             <el-icon><Plus /></el-icon> 新增地址
           </el-button>
         </div>
-        
+
         <div class="address-grid">
-          <div 
-            v-for="addr in addressList" 
+          <div
+            v-for="addr in addressList"
             :key="addr.id"
             :class="['address-item', { active: selectedAddressId === addr.id }]"
             @click="selectedAddressId = addr.id"
@@ -24,37 +24,50 @@
             <div class="name-row">
               <span class="name">{{ addr.receiverName }}</span>
               <span class="phone">{{ addr.receiverPhone }}</span>
-              <el-tag v-if="addr.isDefault" size="small" type="success" effect="plain">默认</el-tag>
+              <el-tag v-if="addr.isDefault === 1" size="small" type="success" effect="plain">默认</el-tag>
             </div>
             <div class="detail-row">
-              {{ addr.province }} {{ addr.city }} {{ addr.district }} {{ addr.detailAddress }}
+              {{ formatAddress(addr) }}
             </div>
             <div class="check-icon" v-if="selectedAddressId === addr.id">
               <el-icon><Select /></el-icon>
             </div>
           </div>
-          <div v-if="addressList.length === 0" class="empty-address" @click="addressDialogVisible = true">
+
+          <div v-if="!addressList.length" class="empty-address" @click="addressDialogVisible = true">
             <el-icon class="icon"><LocationInformation /></el-icon>
             <p>暂无收货地址，点击添加</p>
           </div>
         </div>
       </div>
 
-      <div class="section-card product-section" v-if="productList.length > 0">
-        <div class="card-title">商品清单 ({{ productList.length }})</div>
-        
-        <div v-for="(item, index) in productList" :key="index" class="product-item-wrapper">
+      <!-- 商品清单 -->
+      <div v-if="orderItems.length" class="section-card product-section">
+        <div class="card-title">商品清单 ({{ orderItems.length }})</div>
+
+        <div v-for="item in orderItems" :key="item.productId" class="product-item-wrapper">
           <div class="product-row">
-            <el-image :src="item.image" class="thumb" fit="cover" />
+            <el-image
+              :src="getFullImageUrl(item.image)"
+              class="thumb"
+              fit="cover"
+              lazy
+            />
             <div class="info">
               <div class="title">{{ item.title }}</div>
               <div class="tags">
-                <el-tag size="small" type="info" v-if="item.conditionLevel">{{ getConditionText(item.conditionLevel) }}</el-tag>
-                <el-tag size="small" type="warning" v-else>购物车商品</el-tag>
+                <el-tag v-if="item.conditionLevel" size="small" type="info">
+                  {{ getConditionText(item.conditionLevel) }}
+                </el-tag>
+                <el-tag v-else size="small" type="warning">购物车商品</el-tag>
               </div>
               <div class="price-line">
                 <span class="label">单价：</span>
-                <span class="price">¥ {{ item.price }}</span>
+                <span class="price">¥{{ Number(item.price).toFixed(2) }}</span>
+              </div>
+              <div class="quantity-line" v-if="item.quantity > 1">
+                <span class="label">数量：</span>
+                <span>x {{ item.quantity }}</span>
               </div>
             </div>
           </div>
@@ -66,25 +79,29 @@
             <span>快递 免邮</span>
           </div>
           <div class="item">
-            <span>总数量</span>
-            <span>x {{ productList.length }}</span>
+            <span>商品总价</span>
+            <span>¥{{ totalPrice }}</span>
           </div>
         </div>
       </div>
 
+      <el-empty v-else description="暂无商品信息" />
+
     </div>
 
-    <div class="bottom-bar">
+    <!-- 底部操作栏 -->
+    <div class="bottom-bar" v-if="orderItems.length">
       <div class="bar-container">
         <div class="total-box">
-          <span>共 {{ productList.length }} 件，实付款：</span>
-          <span class="price">¥ {{ totalPrice }}</span>
+          <span>共 {{ orderItems.length }} 件，实付款：</span>
+          <span class="price">¥{{ totalPrice }}</span>
         </div>
-        <el-button 
-          type="primary" 
-          size="large" 
-          class="submit-btn" 
+        <el-button
+          type="primary"
+          size="large"
+          class="submit-btn"
           :loading="submitting"
+          :disabled="!selectedAddressId || submitting"
           @click="handleSubmit"
         >
           提交订单
@@ -92,25 +109,48 @@
       </div>
     </div>
 
-    <el-dialog v-model="addressDialogVisible" title="新增收货地址" width="500px">
-      <el-form :model="addressForm" label-width="80px">
-        <el-form-item label="收货人">
-          <el-input v-model="addressForm.receiverName" placeholder="名字" />
+    <!-- 新增地址弹窗 -->
+    <el-dialog
+      v-model="addressDialogVisible"
+      title="新增收货地址"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="addressFormRef"
+        :model="addressForm"
+        label-width="80px"
+        :rules="addressRules"
+      >
+        <el-form-item label="收货人" prop="receiverName">
+          <el-input v-model="addressForm.receiverName" placeholder="请输入姓名" />
         </el-form-item>
-        <el-form-item label="电话">
-          <el-input v-model="addressForm.receiverPhone" placeholder="手机号" />
+        <el-form-item label="电话" prop="receiverPhone">
+          <el-input v-model="addressForm.receiverPhone" placeholder="请输入手机号" />
         </el-form-item>
         <el-form-item label="区域">
           <el-row :gutter="10">
-            <el-col :span="8"><el-input v-model="addressForm.province" placeholder="省" /></el-col>
-            <el-col :span="8"><el-input v-model="addressForm.city" placeholder="市" /></el-col>
-            <el-col :span="8"><el-input v-model="addressForm.district" placeholder="区" /></el-col>
+            <el-col :span="8">
+              <el-input v-model="addressForm.province" placeholder="省" />
+            </el-col>
+            <el-col :span="8">
+              <el-input v-model="addressForm.city" placeholder="市" />
+            </el-col>
+            <el-col :span="8">
+              <el-input v-model="addressForm.district" placeholder="区/县" />
+            </el-col>
           </el-row>
         </el-form-item>
-        <el-form-item label="详细地址">
-           <el-input v-model="addressForm.detailAddress" type="textarea" :rows="2" />
+        <el-form-item label="详细地址" prop="detailAddress">
+          <el-input
+            v-model="addressForm.detailAddress"
+            type="textarea"
+            :rows="3"
+            placeholder="街道、门牌号、小区等详细地址"
+          />
         </el-form-item>
       </el-form>
+
       <template #footer>
         <el-button @click="addressDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleSaveAddress">保存</el-button>
@@ -120,29 +160,43 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElForm } from 'element-plus'
 import { Plus, Select, LocationInformation } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+
+// API 接口
 import { getProductDetail } from '@/api/product'
-import { getAddressList, addAddress } from '@/api/address'
+import { getMyAddressList, createAddress } from '@/api/address'
 import { createOrder } from '@/api/order'
-import { getCartList } from '@/api/cart' // 引入购物车接口
-import type { AddressDto } from '@/dto/address'
+import { getCartList } from '@/api/cart'
+import { getFullImageUrl } from '@/utils/image'
+
+// DTO 导入
+import type { AddressCreateDto, AddressDto } from '@/dto/address'
+import type { CreateOrderDto } from '@/dto/order' 
 
 const route = useRoute()
 const router = useRouter()
 
+// 状态定义
 const loading = ref(false)
 const submitting = ref(false)
-// 将 product 变量改为 productList 数组
-const productList = ref<any[]>([]) 
+const addressDialogVisible = ref(false)
+
+// 列表数据
+const addressFormRef = ref<InstanceType<typeof ElForm> | null>(null)
 const addressList = ref<AddressDto[]>([])
 const selectedAddressId = ref<number | undefined>(undefined)
-const isCartMode = ref(false) // 标记是否为购物车结算
-
-const addressDialogVisible = ref(false)
-const addressForm = reactive<AddressDto>({
+const orderItems = ref<Array<{
+  productId: number
+  title: string
+  price: number
+  image: string
+  conditionLevel?: number
+  quantity: number // 购物车可能有，单买默认为1
+}>>([])
+const addressForm = reactive<Partial<AddressDto>>({
   receiverName: '',
   receiverPhone: '',
   province: '',
@@ -152,132 +206,182 @@ const addressForm = reactive<AddressDto>({
   isDefault: 0
 })
 
-const getConditionText = (level: number) => {
-  const map: Record<number, string> = { 1: '全新', 2: '99新', 3: '9成新', 4: '8成新' }
-  return map[level] || '二手'
+// 地址表单验证规则
+const addressRules = {
+  receiverName: [{ required: true, message: '请输入收货人姓名', trigger: 'blur' }],
+  receiverPhone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: ['blur', 'change'] }
+  ],
+  detailAddress: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
 }
 
 // 计算总价
 const totalPrice = computed(() => {
-  return productList.value.reduce((sum, item) => sum + Number(item.price), 0).toFixed(2)
+  const sum = orderItems.value.reduce((acc, item) => {
+    const qty = item.quantity || 1
+    return acc + Number(item.price) * qty
+  }, 0)
+  return sum.toFixed(2)
 })
 
-const init = async () => {
+// 获取状态文本
+const getConditionText = (level?: number) => {
+  if (!level) return ''
+  const map: Record<number, string> = {
+    1: '全新',
+    2: '几乎全新',
+    3: '轻微使用',
+    4: '明显使用'
+  }
+  return map[level] || '未知成色'
+}
+
+const formatAddress = (addr: AddressDto) => {
+  return [addr.province, addr.city, addr.district, addr.detailAddress]
+    .filter(Boolean)
+    .join(' ')
+}
+
+const loadAddresses = async () => {
+  try {
+    addressList.value = (await getMyAddressList()) || []
+    if (addressList.value.length > 0 && !selectedAddressId.value) {
+      const defaultAddr = addressList.value.find(a => a.isDefault === 1)
+      selectedAddressId.value = defaultAddr?.id ?? addressList.value[0]?.id
+    }
+  } catch (err) {
+    console.error('获取地址列表失败', err)
+  }
+}
+
+const initData = async () => {
   loading.value = true
   try {
-    // 1. 获取地址列表
     await loadAddresses()
 
-    // 2. 判断来源：直接购买(productId) 还是 购物车(cartIds)
-    const productId = route.query.productId
-    const cartIds = route.query.cartIds
+    const { productId, cartIds } = route.query
 
     if (productId) {
-      // --- 单商品模式 ---
-      isCartMode.value = false
-      const res = await getProductDetail(Number(productId))
-      // 统一转化为数组格式方便渲染
-      productList.value = [{
-        id: res.id, // 这里是 productId
-        title: res.title,
-        price: res.price,
-        image: res.images?.[0] || '',
-        conditionLevel: res.conditionLevel
+      // 单商品购买
+      const pid = Number(productId)
+      if (isNaN(pid)) {
+        ElMessage.warning('无效的商品ID')
+        return router.back()
+      }
+
+      const detail = await getProductDetail(pid)
+      // 假设返回的是 ProductDto 结构
+      orderItems.value = [{
+        productId: detail.id,
+        title: detail.title,
+        price: detail.price,
+        image: detail.images?.[0] || '',
+        conditionLevel: detail.conditionLevel,
+        quantity: 1
       }]
     } else if (cartIds) {
-      // --- 购物车模式 ---
-      isCartMode.value = true
-      const idsStr = String(cartIds).split(',')
-      const targetIds = idsStr.map(Number)
-      
-      // 由于没有专门的 getCartByIds 接口，我们先拉取所有购物车，在前端过滤
-      // (实际项目中应由后端提供 /api/cart/check-out 接口)
-      const allCartItems = await getCartList() || []
-      
-      // 如果 getCartList 返回为空（因为没后端），我们造一些 Mock 数据兜底演示
-      if (allCartItems.length === 0) {
-        // Mock 数据逻辑，仅供演示
-        productList.value = [
-           { id: 101, productId: 1, title: 'iPhone 13 Pro (演示)', image: 'https://img14.360buyimg.com/n0/jfs/t1/202157/16/16309/86720/6178e246E9656839d/0861110825704a2c.jpg', price: 4500 },
-           { id: 102, productId: 3, title: 'Java编程思想 (演示)', image: 'https://img14.360buyimg.com/n0/jfs/t1/1867/26/11488/146050/5bd04183E00388701/374528c3194073f1.jpg', price: 45 }
-        ].filter(item => targetIds.includes(item.id))
-      } else {
-        // 真实逻辑
-        productList.value = allCartItems
-          .filter(item => targetIds.includes(item.id))
-          .map(item => ({
-            id: item.productId, // 注意：下单需要 productId，不是 cartItemId
-            title: item.title,
-            price: item.price,
-            image: item.image,
-            conditionLevel: 0 // 购物车列表可能没返回成色，暂略
-          }))
+      // 购物车结算
+      const ids = String(cartIds)
+        .split(',')
+        .map(id => Number(id.trim()))
+        .filter(id => !isNaN(id))
+
+      if (!ids.length) {
+        ElMessage.warning('没有有效的购物车项')
+        return router.back()
       }
+
+      const cartItems = await getCartList() || []
+
+      orderItems.value = cartItems
+        .filter(item => ids.includes(item.id))
+        .map(item => ({
+          productId: item.productId,
+          title: item.productTitle || '商品名称缺失',
+          price: Number(item.price),
+          image: item.productImage || '',
+          conditionLevel: undefined,
+          quantity: Number(item.quantity) || 1
+        }))
+    } else {
+      ElMessage.warning('缺少必要参数（商品或购物车）')
+      router.back()
+      return
     }
-  } catch (e) {
-    console.error(e)
+  } catch (err: any) {
+    console.error('初始化订单数据失败', err)
     ElMessage.error('加载订单信息失败')
+    setTimeout(() => router.back(), 1200)
   } finally {
     loading.value = false
   }
 }
 
-const loadAddresses = async () => {
-  addressList.value = await getAddressList()
-  if (!selectedAddressId.value && addressList.value.length > 0) {
-    const defaultAddr = addressList.value.find(a => a.isDefault === 1)
-    selectedAddressId.value = defaultAddr ? defaultAddr.id : addressList.value[0].id
-  }
-}
-
 const handleSaveAddress = async () => {
-  if (!addressForm.receiverName || !addressForm.receiverPhone) {
-    return ElMessage.warning('请填写完整信息')
-  }
+  if (!addressFormRef.value) return
+
   try {
-    await addAddress({ ...addressForm })
+    await addressFormRef.value.validate()
+    await createAddress(addressForm as AddressCreateDto)
     ElMessage.success('地址添加成功')
     addressDialogVisible.value = false
+
+    // 重置表单
+    Object.assign(addressForm, {
+      receiverName: '',
+      receiverPhone: '',
+      province: '',
+      city: '',
+      district: '',
+      detailAddress: ''
+    })
+
     await loadAddresses()
-  } catch (e) { console.error(e) }
+  } catch (err) {
+    // 校验失败或接口失败不额外提示，element-plus 会显示
+  }
 }
 
 const handleSubmit = async () => {
-  if (!selectedAddressId.value) return ElMessage.warning('请选择收货地址')
-  if (productList.value.length === 0) return
+  if (!selectedAddressId.value) {
+    return ElMessage.warning('请选择收货地址')
+  }
+  if (!orderItems.value.length) return
 
   submitting.value = true
   try {
-    // 核心逻辑：循环下单
-    // 因为后端 createOrder 接口每次只接收一个 productId
-    const promises = productList.value.map(item => {
-      return createOrder({
-        productId: item.id, // 这里的 id 已经是 productId 了
-        quantity: 1,
+    // 当前后端接口只支持单商品下单 → 需逐个调用
+    // 建议未来后端提供批量接口：createBatchOrder({ items: [{productId, quantity, addressId}] })
+    const promises = orderItems.value.map(item => {
+      const dto: CreateOrderDto = {
+        productId: item.productId,
+        quantity: item.quantity || 1,
         addressId: selectedAddressId.value!
-      })
+      }
+      return createOrder(dto)
     })
 
     const results = await Promise.all(promises)
-    
-    // 如果只创建了一个订单，跳转到支付页面；多个订单则跳转到用户中心
-    if (results.length === 1 && results[0]?.orderNo) {
+
+    const successCount = results.filter(r => r?.orderNo).length
+
+    ElMessage.success(`成功创建 ${successCount} 个订单`)
+
+    if (successCount === 1 && results[0]?.orderNo) {
       router.replace(`/pay/${results[0].orderNo}`)
     } else {
-      ElMessage.success(`成功创建 ${productList.value.length} 个订单！`)
-      router.replace('/user')
+      router.replace('/user/orders')
     }
-  } catch (e) {
-    console.error(e)
-    // ElMessage 由拦截器处理
+  } catch (err) {
+    console.error('创建订单失败', err)
+    // 错误提示建议由 axios 拦截器统一处理
   } finally {
     submitting.value = false
   }
 }
 
-onMounted(() => {
-  init()
-})
+onMounted(initData)
 </script>
 
 <style scoped lang="scss">

@@ -185,39 +185,36 @@ const submitForm = async () => {
     if (valid) {
       submitting.value = true
       try {
-        // 1. 提取上传成功的图片 URL
         const imageUrls = fileList.value
+          .filter(file => file.status === 'success') 
           .map(file => {
             const resp = file.response;
-            if (typeof resp === 'string') return resp;
             if (resp && typeof resp === 'object') return (resp as any).url;
+            if (typeof resp === 'string') return resp;
             return null;
           })
-          .filter((url): url is string => !!url); // 过滤掉 null 或 undefined
-
-        // 2. 检查图片是否全部上传成功
-        // 如果你选择了 1 张图，但 imageUrls 为空，则会进这个判断
+          .filter((url): url is string => !!url);
+          await publishProduct({
+            title: form.title,
+            description: form.description,
+            price: form.price,
+            categoryId: form.categoryId!,
+            conditionLevel: form.conditionLevel,
+            images: imageUrls
+          });
+          console.log(publishProduct);
         if (imageUrls.length < fileList.value.length) {
           ElMessage.warning('部分图片尚未上传完成或上传失败，请稍后');
           submitting.value = false;
           return;
         }
 
-        // 3. 调用发布接口
-        // 确保传递的是组装好的数据
-        await publishProduct({
-          title: form.title,
-          description: form.description,
-          price: form.price,
-          categoryId: form.categoryId!,
-          conditionLevel: form.conditionLevel,
-          images: imageUrls // 发送 string[]
-        })
 
         ElMessage.success('发布成功！')
         router.push('/')
-      } catch (error) {
+      } catch (error: any) {
         console.error('发布失败:', error)
+        ElMessage.error(error.response?.data?.message || '发布失败，请检查网络');
       } finally {
         submitting.value = false
       }

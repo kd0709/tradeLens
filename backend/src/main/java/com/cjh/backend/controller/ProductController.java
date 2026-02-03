@@ -95,14 +95,14 @@ public class ProductController {
      */
     @GetMapping("/my")
     public Result<PageDto<ProductMyDto>> listMyProducts(
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) Integer status,
             @CurrentUser Long userId) {
         log.info("用户 {} 查询我的发布列表：page={}, size={}, status={}",
-                userId, page, size, status);
+                userId, current, size, status);
         try {
-            PageDto<ProductMyDto> result = productService.listMyProducts(userId, page, size, status);
+            PageDto<ProductMyDto> result = productService.listMyProducts(userId, current, size, status);
             log.info("用户 {} 我的发布列表查询成功，共 {} 条", userId, result.getTotal());
             return Result.success(result);
         } catch (Exception e) {
@@ -116,19 +116,20 @@ public class ProductController {
      */
     @GetMapping("/list")
     public Result<PageDto<ProductListDto>> listProducts(
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) Integer condition,
-            @RequestParam(required = false) String sort,          // 示例: price_asc, price_desc, time_desc
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(required = false) String sort // 示例: price_asc, price_desc, time_desc
+    ) {
         log.info("商品搜索请求：keyword={}, categoryId={}, page={}, size={}",
-                keyword, categoryId, page, size);
+                keyword, categoryId, current, size);
         try {
             PageDto<ProductListDto> result = productService.listProducts(
-                    keyword, categoryId, minPrice, maxPrice, condition, sort, page, size);
+                    keyword, categoryId, minPrice, maxPrice, condition, sort, current, size);
             log.info("商品搜索成功，共 {} 条", result.getTotal());
             return Result.success(result);
         } catch (Exception e) {

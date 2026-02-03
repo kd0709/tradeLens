@@ -1,19 +1,19 @@
 import request from './request'
-import type { AddressDto } from '@/dto/address'
+import type { AddressDto, AddressCreateDto, AddressUpdateDto } from '@/dto/address'
 
 
 // 获取地址列表
-export function getAddressList(): Promise<AddressDto[]> {
+export function getMyAddressList(): Promise<AddressDto[]> {
   return request.get('/api/address/list')
 }
 
 // 添加新地址
-export function addAddress(data: AddressDto): Promise<void> {
+export function createAddress(data: AddressCreateDto): Promise<void> {
   return request.post('/api/address', data)
 }
 
 // 更新地址
-export function updateAddress(data: AddressDto): Promise<void> {
+export function updateAddress(data: AddressUpdateDto): Promise<void> {
   return request.put('/api/address', data)
 }
 

@@ -8,7 +8,7 @@
       <div class="cart-list" v-if="cartList.length > 0">
         <div class="cart-header">
           <el-checkbox 
-            v-model="isAllChecked" 
+            :model-value="isAllChecked" 
             :indeterminate="isIndeterminate"
             @change="handleCheckAllChange"
           >
@@ -21,38 +21,46 @@
           <span class="col-action">操作</span>
         </div>
 
-        <div class="cart-item" v-for="item in cartList" :key="item.id">
-          <div class="item-check">
-            <el-checkbox v-model="selectionSet" :label="item.id" @change="handleSelectionChange">
-              &nbsp; </el-checkbox>
-          </div>
-          
-          <div class="item-info" @click="$router.push(`/product/${item.productId}`)">
-            <el-image :src="item.image" class="thumb" fit="cover" />
-            <div class="detail">
-              <div class="title">{{ item.title }}</div>
-              <div class="seller">卖家：{{ item.sellerName }}</div>
+        <el-checkbox-group v-model="selectionSet">
+          <div class="cart-item" v-for="(item,index) in cartList" :key="item.id">
+            <div class="item-check">
+              <el-checkbox :label="item.id" />
+            </div>
+            
+            <div class="item-info" @click="$router.push(`/product/${item.productId}`)">
+              <el-image 
+                :src="getFullImageUrl(item.productImage)" 
+                class="thumb" 
+                fit="cover" 
+                :lazy="true"
+              />
+              <div class="detail">
+                <div class="title">{{ item.productTitle || '商品名称缺失' }}</div>
+                <div class="seller">卖家：待补充</div>
+              </div>
+            </div>
+
+            <div class="item-price">¥{{ Number(item.price).toFixed(2) }}</div>
+
+
+            <div class="item-qty">
+              <el-input-number 
+                v-model="item.quantity" 
+                :min="1" 
+                size="small"
+                @change="(val: number) => handleQuantityChange(item.id, val)"
+              />
+            </div>
+
+            <div class="item-total">
+              ¥{{ (Number(item.price) * item.quantity).toFixed(2) }}
+            </div>
+
+            <div class="item-action">
+              <el-button link type="danger" @click="handleDelete([item.id])">删除</el-button>
             </div>
           </div>
-
-          <div class="item-price">¥ {{ item.price }}</div>
-
-          <div class="item-qty">
-            <el-input-number 
-              v-model="item.quantity" 
-              :min="1" 
-              :max="item.stock || 1" 
-              size="small"
-              @change="(val) => handleQuantityChange(item.id, val)" 
-            />
-          </div>
-
-          <div class="item-total">¥ {{ (item.price * item.quantity).toFixed(2) }}</div>
-
-          <div class="item-action">
-            <el-button link type="danger" @click="handleDelete([item.id])">删除</el-button>
-          </div>
-        </div>
+        </el-checkbox-group>
       </div>
 
       <el-empty v-else description="购物车空空如也">
@@ -64,13 +72,18 @@
       <div class="bar-container">
         <div class="left">
           <el-checkbox 
-            v-model="isAllChecked" 
+            :model-value="isAllChecked" 
             :indeterminate="isIndeterminate"
             @change="handleCheckAllChange"
           >
             全选
           </el-checkbox>
-          <el-button link @click="handleBatchDelete" :disabled="selectionSet.length === 0">
+          <el-button 
+            link 
+            type="danger" 
+            @click="handleBatchDelete" 
+            :disabled="selectionSet.length === 0"
+          >
             删除选中
           </el-button>
         </div>
@@ -78,7 +91,7 @@
           <div class="total-info">
             <span>已选 {{ selectionSet.length }} 件，</span>
             <span>合计：</span>
-            <span class="price">¥ {{ totalPrice }}</span>
+            <span class="price">¥{{ totalPrice }}</span>
           </div>
           <el-button 
             type="primary" 
@@ -99,96 +112,118 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCartList, updateCartItem, deleteCartItems } from '@/api/cart'
-import type { CartItemDto } from '@/dto/cart'
+
+// API 导入
+import { getCartList, updateCartQuantity, deleteCartItems } from '@/api/cart'
+
+// DTO 导入
+import type { CartListDto, UpdateCartQuantityDto } from '@/dto/cart'
+import { getFullImageUrl } from '@/utils/image'
 
 const router = useRouter()
-const cartList = ref<CartItemDto[]>([])
-const selectionSet = ref<number[]>([]) // 存储选中的购物车ID
 
-// 计算属性：总价
+// 数据列表
+const cartList = ref<CartListDto[]>([])
+const selectionSet = ref<number[]>([])  
+const currentUpdateDto = ref<UpdateCartQuantityDto>()
+
+
+// 计算总价（只算选中的商品）
 const totalPrice = computed(() => {
-  let sum = 0
-  selectionSet.value.forEach(id => {
-    const item = cartList.value.find(i => i.id === id)
-    if (item) {
-      sum += item.price * item.quantity
-    }
-  })
-  return sum.toFixed(2)
+  return selectionSet.value
+    .reduce((sum, id) => {
+      const item = cartList.value.find(i => i.id === id)
+      return item ? sum + item.price * item.quantity : sum
+    }, 0)
+    .toFixed(2)
 })
 
-// 全选状态逻辑
+// 全选 / 半选 状态
 const isAllChecked = computed({
   get: () => cartList.value.length > 0 && selectionSet.value.length === cartList.value.length,
-  set: (val) => { /* logic handled in handleCheckAllChange */ }
+  set: () => {}  // set 交给 handleCheckAllChange 处理
 })
 
-const isIndeterminate = computed(() => {
-  return selectionSet.value.length > 0 && selectionSet.value.length < cartList.value.length
-})
+const isIndeterminate = computed(() => 
+  selectionSet.value.length > 0 && 
+  selectionSet.value.length < cartList.value.length
+)
 
-// 加载数据
+// 加载购物车列表
 const loadData = async () => {
   try {
     const res = await getCartList()
-    // 后端返回CartListDto，需要转换为前端CartItemDto格式
-    cartList.value = (res || []).map((item: any) => ({
-      id: item.id,
-      productId: item.productId,
-      title: item.productTitle || '',
-      image: item.productImage || '',
-      price: Number(item.price),
-      quantity: item.quantity,
-      stock: 999,  // 后端没有返回库存，设为默认值
-      sellerName: ''  // 后端没有返回卖家名称
-    }))
+    cartList.value = res || []
+    console.log(cartList.value)
   } catch (e) {
     console.error('加载购物车失败:', e)
+    ElMessage.error('加载购物车失败，请稍后重试')
     cartList.value = []
   }
 }
 
-// 事件处理
-const handleCheckAllChange = (val: boolean) => {
-  selectionSet.value = val ? cartList.value.map(item => item.id) : []
+// 全选/取消全选
+const handleCheckAllChange = (checked: boolean) => {
+  selectionSet.value = checked 
+    ? cartList.value.map(item => item.id) 
+    : []
 }
 
-const handleSelectionChange = (val: any) => {
-  // 自动触发 computed 更新
-}
-
-const handleQuantityChange = async (id: number, val: number | undefined) => {
-  if (!val) return
+// 修改商品数量
+const handleQuantityChange = async (id: number, newVal: number) => {
+  const item = cartList.value.find(i => i.id === id)
+  if (!item) return
   try {
-    await updateCartItem(id, val)
-  } catch (e) { console.error(e) }
+    currentUpdateDto.value = { id, quantity: newVal }
+    await updateCartQuantity(currentUpdateDto.value)
+    // 成功后更新本地
+    item.quantity = newVal
+  } catch (e) {
+    console.error('更新数量失败:', e)
+    ElMessage.error('修改数量失败')
+  }
 }
 
+// 删除（支持单个或批量）
 const handleDelete = async (ids: number[]) => {
+  if (!ids.length) return
+
   try {
-    await ElMessageBox.confirm('确定将选中商品移出购物车吗？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm(
+      `确定删除选中的 ${ids.length} 件商品吗？`,
+      '提示',
+      { type: 'warning' }
+    )
+    
     await deleteCartItems(ids)
     ElMessage.success('删除成功')
-    // 本地移除
+
+    // 更新本地列表
     cartList.value = cartList.value.filter(item => !ids.includes(item.id))
     selectionSet.value = selectionSet.value.filter(id => !ids.includes(id))
-  } catch (e) { /* cancel */ }
+  } catch (err) {
+    // 用户取消不提示
+    if (err !== 'cancel') {
+      ElMessage.error('删除失败，请重试')
+    }
+  }
 }
 
 const handleBatchDelete = () => {
-  handleDelete(selectionSet.value)
+  handleDelete([...selectionSet.value])
 }
 
+// 去结算
 const handleCheckout = () => {
-  // 购物车结算，跳转到 OrderCreate
-  // 由于我们 OrderCreate 目前只支持单商品购买 (productId)，需要改造 OrderCreate 支持购物车结算
-  // 这里暂时传递一个标记，或者将选中的 cartIds 传过去
-  
-  const selectedCartIds = selectionSet.value.join(',')
-  router.push({ 
-    path: '/order/create', 
-    query: { cartIds: selectedCartIds } 
+  if (!selectionSet.value.length) {
+    ElMessage.warning('请至少选择一件商品')
+    return
+  }
+
+  const cartIds = selectionSet.value.join(',')
+  router.push({
+    path: '/order/create',
+    query: { cartIds }
   })
 }
 

@@ -1,5 +1,5 @@
 import request from './request'
-import type { ProductDto, ProductQuery, ProductPublishDto } from '@/dto/product'
+import type { ProductStatusUpdateDto, ProductDto, ProductQuery, ProductPublishDto, ProductUpdateDto } from '@/dto/product'
 import type { PageResult } from '@/dto/common'
 
 // 发布商品接口
@@ -8,7 +8,7 @@ export function publishProduct(data: ProductPublishDto): Promise<number> {
 }
 
 // 修改商品状态
-export function updateProductStatus(data: ProductPublishDto & { status: number }): Promise<number> {
+export function updateProductStatus(data: ProductStatusUpdateDto): Promise<number> {
   return request.put('/api/product/status', data)
 }
 
@@ -19,21 +19,36 @@ export function deleteProduct(productId: number): Promise<void> {
 
 // 获取我的商品
 export function getMyProducts(query: ProductQuery): Promise<PageResult<ProductDto>> {
-  return request.get('/api/product/my', { params: query }) // 修正为 /my
+  return request.get('/api/product/my', { 
+    params: {
+      current: query.current,
+      size: query.size,
+      status: query.status
+    } 
+  })       
 }
 
-// 获取商品列表 
+// 商品搜索列表 
 export function getProductList(query: ProductQuery): Promise<PageResult<ProductDto>> {
-  return request.get('/api/product/list', { params: query })
+  return request.get('/api/product/list', { 
+    params:{
+      current: query.current,
+      size: query.size,
+      keyword: query.keyword,
+      categoryId: query.categoryId,
+      condition: query.condition,
+      sort: query.sort  
+    }  
+  })
 }
 
 // 获取商品详情
 export function getProductDetail(id: number): Promise<ProductDto> {
-  return request.get(`/api/product/${id}`) // 去掉 /detail
+  return request.get(`/api/product/${id}`) 
 }
 
 // 编辑商品接口
-export function updateProduct(data: ProductPublishDto & { id: number }): Promise<void> {
+export function updateProduct(data: ProductUpdateDto): Promise<void> {
   return request.put('/api/product', data)
 }
 

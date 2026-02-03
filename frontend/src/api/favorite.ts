@@ -1,8 +1,10 @@
 import request from './request'
 
+import  type { FavoriteToggleDto } from '@/dto/favorite'
+
 // 切换收藏状态
-export function toggleFavorite(productId: number): Promise<boolean> {
-  return request.post('/api/favorite/toggle', { productId })
+export function toggleFavorite(data: FavoriteToggleDto): Promise<boolean> {
+  return request.post('/api/favorite/toggle', data)
 }
 
 // 获取收藏列表

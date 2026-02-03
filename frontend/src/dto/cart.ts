@@ -1,10 +1,21 @@
-export interface CartItemDto {
+import { addToCart } from "@/api/cart"
+
+export interface CartListDto {
   id: number
   productId: number
-  title: string
-  image: string
+  productTitle: string
   price: number
   quantity: number
-  stock: number // 库存，用于限制最大购买数
-  sellerName: string
+  productImage: string
+  createTime: string
+}
+
+export interface AddToCartDto {
+  productId: number
+  quantity: number
+}
+
+export interface UpdateCartQuantityDto {
+  id: number
+  quantity: number
 }

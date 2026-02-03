@@ -20,11 +20,21 @@
 
     <select id="selectCartListByUserId" resultType="com.cjh.backend.dto.Cart.CartListDto">
         SELECT
-        c.id, c.product_id, c.quantity, c.create_time,
-        p.title AS product_title,
-        p.price
+            c.id,
+            c.product_id,
+            c.quantity,
+            c.create_time,
+            p.title          AS product_title,
+            p.price,
+            (
+                SELECT pi.image_url
+                FROM tradelens.product_image pi
+                WHERE pi.product_id = p.id
+                ORDER BY pi.sort ASC, pi.id ASC
+                LIMIT 1
+            ) AS productImage
         FROM tradelens.cart c
-        LEFT JOIN tradelens.product p ON c.product_id = p.id
+                 LEFT JOIN tradelens.product p ON c.product_id = p.id
         WHERE c.user_id = #{userId}
         ORDER BY c.create_time DESC
     </select>

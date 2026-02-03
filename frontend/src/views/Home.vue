@@ -1,6 +1,5 @@
 <template>
   <div class="home-page">
-    
     <div class="banner-section" v-if="banners.length > 0">
       <div class="container">
         <el-carousel :interval="4000" type="card" height="300px">
@@ -59,7 +58,7 @@
         v-for="item in productList" 
         :key="item.id" 
         class="product-card"
-        @click="goToDetail(item.id)"
+        @click="goToDetail(item)"
       >
         <div class="image-wrapper">
           <img 
@@ -101,15 +100,19 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
+
+// API 接口
 import { getProductList } from '@/api/product'
 import { getCategoryList } from '@/api/category'
-import { getFullImageUrl } from '@/utils/image' // 确保你已创建此工具文件
+
+// DTO 导入
+import { getFullImageUrl } from '@/utils/image' 
 import type { ProductQuery } from '@/dto/product'
 
 const router = useRouter()
 const route = useRoute()
 
-// --- 状态定义 ---
+// 状态定义
 const loading = ref(false)
 const productList = ref<any[]>([]) // 直接使用后端返回的列表对象
 const categories = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '全部' }])
@@ -117,16 +120,17 @@ const isSticky = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 const banners = ref<any[]>([]) // 模拟数据已删除，预留接口位置
 
-// --- 查询参数 ---
+// 查询参数
 const queryParams = reactive<ProductQuery>({
-  page: 1,
+  current: 1,
   size: 20,
+  status: 2,
   categoryId: undefined,
   keyword: '',
   sort: undefined
 })
 
-// --- 核心逻辑 ---
+
 
 // 加载分类数据
 const loadCategories = async () => {
@@ -146,7 +150,7 @@ const loadData = async () => {
   loading.value = true
   try {
     const params: any = {
-      page: queryParams.page,
+      current: queryParams.current,
       size: queryParams.size,
       keyword: queryParams.keyword || undefined,
       sort: queryParams.sort
@@ -157,7 +161,6 @@ const loadData = async () => {
     
     const res = await getProductList(params)
     productList.value = res.list || [] 
-    console.log('加载商品列表:', productList.value)
   } catch (error) {
     console.error('加载商品列表失败:', error)
   } finally {
@@ -169,7 +172,7 @@ const loadData = async () => {
 
 const handleCategoryChange = (id: number) => {
   queryParams.categoryId = id === 0 ? undefined : id
-  queryParams.page = 1
+  queryParams.current = 1
   loadData()
 }
 
@@ -183,8 +186,8 @@ const togglePriceSort = () => {
   loadData()
 }
 
-const goToDetail = (id: number) => {
-  router.push(`/product/${id}`)
+const goToDetail = (item: any) => {
+  router.push(`/product/${item.id}`)
 }
 
 // --- 辅助工具 ---

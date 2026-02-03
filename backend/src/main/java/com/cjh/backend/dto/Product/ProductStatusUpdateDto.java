@@ -15,5 +15,5 @@ public class ProductStatusUpdateDto {
 
     @NotNull(message = "状态不能为空")
     @Range(min = 1, max = 5, message = "状态值无效")
-    private Integer status;  // 参考文档：2 上架 5 下架（可扩展其他状态）
+    private Integer status;  // 参考文档：2 上架 3 下架
 }

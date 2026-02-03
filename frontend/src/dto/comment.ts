@@ -1,5 +1,5 @@
-export interface CommentDto {
-  orderId: number  // 后端只需要orderId和score，productId不需要
+export interface CommentPublishDto {
+  orderId: number  
   score: number
-  content?: string  // 可选
+  content?: string  
 }

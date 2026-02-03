@@ -12,13 +12,13 @@ public class CartListDto {
 
     private Long productId;
 
-    private String productTitle;   // 商品标题（快照）
+    private String productTitle;   // 商品标题快照
 
-    private BigDecimal price;      // 当前价格（快照）
+    private BigDecimal price;      // 当前价格快照
 
     private Integer quantity;
 
-    private String productImage;   // 主图（可选）
+    private String productImage;   // 主图
 
     private LocalDateTime createTime;
 }

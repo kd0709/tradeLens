@@ -47,7 +47,7 @@ public class CartController {
      * 购物车列表
      */
     @GetMapping("/list")
-    public Result<List<CartListDto>> listCart(@CurrentUser Long userId) {
+    public Result<List<CartListDto>> getCartList(@CurrentUser Long userId) {
         log.info("用户 {} 查询购物车列表", userId);
         try {
             List<CartListDto> list = cartService.listCart(userId);
@@ -63,7 +63,7 @@ public class CartController {
      * 更新购物车数量
      */
     @PutMapping("/update")
-    public Result<String> updateQuantity(
+    public Result<String> updateCartQuantity(
             @CurrentUser Long userId,
             @Valid @RequestBody UpdateCartQuantityDto dto) {
         log.info("用户 {} 更新购物车项 {} 数量为 {}", userId, dto.getId(), dto.getQuantity());
@@ -82,7 +82,7 @@ public class CartController {
     @DeleteMapping("/delete")
     public Result<String> deleteCartItems(
             @CurrentUser Long userId,
-            @RequestBody List<Long> cartIds) {
+            @RequestParam("cartIds") List<Long> cartIds) {
         log.info("用户 {} 删除购物车项: {}", userId, cartIds);
         try {
             cartService.deleteCartItems(userId, cartIds);

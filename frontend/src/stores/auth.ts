@@ -12,10 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(loginData: LoginRequest) {
     const result = await authApi.login(loginData)
-    
-    // 假设后端返回结构为 { token: string, user: UserInfo }
-    // 如果 result 直接就是 UserInfo 且包含 token，则按需提取
-    console.log(result)
+  
     token.value = result.token
     user.value = result 
 

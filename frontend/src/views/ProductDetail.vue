@@ -49,9 +49,9 @@
           </div>
 
           <div class="seller-card">
-            <el-avatar :size="48" :src="getFullImageUrl(product.seller?.avatar)" />
+            <el-avatar :size="48" :src="getFullImageUrl(product.sellerAvatar )" />
             <div class="seller-info">
-              <div class="name">{{ product.seller?.nickname || '匿名卖家' }}</div>
+              <div class="name">{{ product.sellerNickname || '匿名卖家' }}</div>
               <div class="desc">信用极好 · 回复快</div>
             </div>
             <el-button round size="small">私聊</el-button>
@@ -104,6 +104,7 @@ import { addToCart } from '@/api/cart'
 import { toggleFavorite } from '@/api/favorite'
 import type { ProductDto } from '@/dto/product'
 import { getFullImageUrl } from '@/utils/image'
+import type { FavoriteToggleDto } from '@/dto/favorite'
 
 const route = useRoute()
 const router = useRouter()
@@ -111,6 +112,7 @@ const loading = ref(false)
 const product = ref<ProductDto | null>(null)
 const currentImage = ref('')
 const isLiked = ref(false)
+const toggleId =ref<FavoriteToggleDto>()
 
 // 获取成色文本
 const getConditionText = (level: number) => {
@@ -172,8 +174,9 @@ const handleAddToCart = async () => {
 
 const toggleLike = async () => {
   if (!product.value) return
-  try {
-    const newStatus = await toggleFavorite(product.value.id)
+  try { 
+    toggleId.value = { productId: product.value.id }
+    const newStatus = await toggleFavorite(toggleId.value)
     isLiked.value = newStatus
     ElMessage.success(newStatus ? '收藏成功' : '已取消收藏')
   } catch (error) {

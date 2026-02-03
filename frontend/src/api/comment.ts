@@ -1,8 +1,8 @@
 import request from './request'
-import type { CommentDto } from '../dto/comment'
+import type { CommentPublishDto } from '../dto/comment'
 
 // 发布商品评价
-export function publishComment(data: CommentDto): Promise<void> {
+export function publishComment(data: CommentPublishDto): Promise<void> {
   return request.post('/api/comment/publish', data)
 }
 
