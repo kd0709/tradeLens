@@ -161,6 +161,7 @@ const loadData = async () => {
     
     const res = await getProductList(params)
     productList.value = res.list || [] 
+    console.log('加载商品列表成功:', productList.value)
   } catch (error) {
     console.error('加载商品列表失败:', error)
   } finally {

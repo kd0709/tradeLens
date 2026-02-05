@@ -27,7 +27,7 @@
             >
               <el-icon><Plus /></el-icon>
             </el-upload>
-            <div class="tip-text">支持 jpg/png，单张不超过 5MB</div>
+            <div class="tip-text">支持 jpg/png，单张不超过 5MB（已上传 {{ uploadedImages.length }} 张）</div>
           </el-form-item>
 
           <el-form-item label="标题" prop="title">
@@ -109,13 +109,16 @@ import type { FormInstance, UploadRequestOptions, UploadUserFile } from 'element
 import { uploadFile } from '@/api/common'
 import { publishProduct } from '@/api/product'
 import { getCategoryList } from '@/api/category'
+
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const fileList = ref<UploadUserFile[]>([])
 const categories = ref<Array<{ id: number; name: string }>>([])
 
-// 表单数据
+// 🔥 关键修改：使用独立数组存储已上传成功的图片URL
+const uploadedImages = ref<string[]>([])
+
 const form = reactive({
   title: '',
   description: '',
@@ -125,7 +128,6 @@ const form = reactive({
   images: [] as string[]
 })
 
-// 校验规则
 const rules = {
   title: [{ required: true, message: '请输入商品标题', trigger: 'blur' }],
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
@@ -133,9 +135,8 @@ const rules = {
   conditionLevel: [{ required: true, message: '请选择成色', trigger: 'change' }],
   images: [{ 
     required: true, 
-    message: '请至少上传一张图片', 
-    validator: (rule: any, value: any, callback: any) => {
-      if (fileList.value.length === 0) {
+    validator: (_rule: any, _value: any, callback: any) => {
+      if (uploadedImages.value.length === 0) {
         callback(new Error('请至少上传一张图片'))
       } else {
         callback()
@@ -145,26 +146,62 @@ const rules = {
   }]
 }
 
+// 删除文件时，同时从 uploadedImages 中移除对应的 URL
 const handleRemove = (uploadFile: UploadUserFile) => {
-  console.log('文件已移除:', uploadFile)
-}
-
-const handleUpload = async (options: UploadRequestOptions) => {
-  try {
-    const url = await uploadFile(options.file)
-
-    options.onSuccess(
-      { url }, // 统一成对象
-    )
-  } catch (error) {
-    options.onError(error as any)
-    ElMessage.error('图片上传失败')
+  
+  // 从 uploadedImages 中移除对应的 URL
+  const resp = uploadFile.response
+  let urlToRemove = null
+  
+  if (resp && typeof resp === 'object' && 'url' in resp) {
+    urlToRemove = resp.url
+  } else if (typeof resp === 'string') {
+    urlToRemove = resp
+  }
+  
+  if (urlToRemove) {
+    const index = uploadedImages.value.indexOf(urlToRemove)
+    if (index > -1) {
+      uploadedImages.value.splice(index, 1)
+    }
   }
 }
 
-// 加载分类列表
+// 自定义上传方法
+const handleUpload = async (options: UploadRequestOptions) => {
+  try {
+    const result = await uploadFile(options.file)
+    
+    // 处理不同的返回格式
+    let url: string = ''
+    if (typeof result === 'string') {
+      url = result
+    } else if (result && typeof result === 'object') {
+      // 可能是 { url: "..." } 或 { data: "..." } 等格式
+      url = (result as any).url || (result as any).data || String(result)
+    }
+    
+    if (!url) {
+      throw new Error('上传返回的URL格式不正确')
+    }
+    
+    // 🔥 关键：将上传成功的 URL 添加到 uploadedImages
+    uploadedImages.value.push(url)
+    
+    // 调用 onSuccess，传递 URL
+    options.onSuccess({ url })
+    
+    // 触发表单验证更新
+    formRef.value?.validateField('images')
+  } catch (error) {
+    console.error('❌ 上传失败:', error)
+    options.onError(error as any)
+    ElMessage.error('图片上传失败，请重试')
+  }
+}
+
 const loadCategories = async () => {
-  if (categories.value.length > 0) return  // 已加载过
+  if (categories.value.length > 0) return
   try {
     const catList = await getCategoryList()
     categories.value = catList.map((cat: any) => ({ id: cat.id, name: cat.name }))
@@ -177,47 +214,37 @@ onMounted(() => {
   loadCategories()
 })
 
-// 提交表单
 const submitForm = async () => {
   if (!formRef.value) return
   
   await formRef.value.validate(async (valid) => {
-    if (valid) {
-      submitting.value = true
-      try {
-        const imageUrls = fileList.value
-          .filter(file => file.status === 'success') 
-          .map(file => {
-            const resp = file.response;
-            if (resp && typeof resp === 'object') return (resp as any).url;
-            if (typeof resp === 'string') return resp;
-            return null;
-          })
-          .filter((url): url is string => !!url);
-          await publishProduct({
-            title: form.title,
-            description: form.description,
-            price: form.price,
-            categoryId: form.categoryId!,
-            conditionLevel: form.conditionLevel,
-            images: imageUrls
-          });
-          console.log(publishProduct);
-        if (imageUrls.length < fileList.value.length) {
-          ElMessage.warning('部分图片尚未上传完成或上传失败，请稍后');
-          submitting.value = false;
-          return;
-        }
+    if (!valid) return
 
 
-        ElMessage.success('发布成功！')
-        router.push('/')
-      } catch (error: any) {
-        console.error('发布失败:', error)
-        ElMessage.error(error.response?.data?.message || '发布失败，请检查网络');
-      } finally {
-        submitting.value = false
-      }
+    // 直接使用 uploadedImages 数组，不再依赖 fileList 的 status
+    if (uploadedImages.value.length === 0) {
+      ElMessage.warning('请至少上传一张图片')
+      return
+    }
+
+    submitting.value = true
+    try {
+      await publishProduct({
+        title: form.title,
+        description: form.description,
+        price: form.price,
+        categoryId: form.categoryId!,
+        conditionLevel: form.conditionLevel,
+        images: uploadedImages.value  // 🔥 直接使用 uploadedImages
+      })
+
+      ElMessage.success('发布成功！')
+      router.push('/')
+    } catch (error: any) {
+      console.error('❌ 发布失败:', error)
+      ElMessage.error(error.response?.data?.message || '发布失败，请检查网络')
+    } finally {
+      submitting.value = false
     }
   })
 }

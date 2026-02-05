@@ -45,7 +45,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
         log.debug("Authorization header: {}", header);
-        if (header == null || !header.startsWith("Bearer ")) {
+        if (header == null || !header.startsWith("Bear  er ")) {
             log.warn("401: 未提供 Token");
             writeErrorResponse(response, 401, "未提供 Token");
             return;
