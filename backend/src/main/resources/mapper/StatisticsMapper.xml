@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cjh.backend.mapper.StatisticsMapper">
+
+    <!-- =======卖家总体统计======== -->
+    <select id="selectSellerSummary"
+            resultType="com.cjh.backend.dto.data.SalesStatisticsDto$SellerSummaryDto">
+        SELECT
+            IFNULL(SUM(total_price), 0) AS totalAmount,
+            COUNT(id) AS totalOrders
+        FROM tradelens.orders
+        WHERE seller_id = #{sellerId}
+          AND status = 4
+    </select>
+
+
+    <!-- =======最近7天销售趋势======== -->
+    <select id="selectSellerLast7DaysTrend"
+            resultType="com.cjh.backend.dto.data.SalesStatisticsDto$DailySalesDto">
+        SELECT
+            DATE_FORMAT(create_time, '%m-%d') AS date,
+            IFNULL(SUM(total_price), 0) AS amount
+        FROM tradelens.orders
+        WHERE seller_id = #{sellerId}
+          AND status = 4
+          AND finish_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE_FORMAT(create_time, '%m-%d')
+        ORDER BY date ASC
+    </select>
+
+
+    <!-- =======商品分类销售占比======== -->
+    <select id="selectSellerCategoryStats"
+            resultType="com.cjh.backend.dto.data.SalesStatisticsDto$CategoryStatDto">
+        SELECT
+            c.name AS name,
+            SUM(oi.price * oi.quantity) AS value
+        FROM tradelens.orders o
+                 JOIN tradelens.order_item oi ON o.id = oi.order_id
+                 JOIN tradelens.product p ON oi.product_id = p.id
+                 JOIN tradelens.category c ON p.category_id = c.id
+        WHERE o.seller_id = #{sellerId}
+          AND o.status = 4
+        GROUP BY c.id, c.name
+    </select>
+
+</mapper>

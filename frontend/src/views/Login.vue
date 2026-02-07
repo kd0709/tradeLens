@@ -23,8 +23,18 @@
            <span class="text">TradeLens</span>
         </div>
 
-        <h2 class="form-title">{{ isLogin ? '登录账户' : '创建账户' }}</h2>
-        <p class="form-subtitle">{{ isLogin ? '欢迎回来' : '加入我们，开始交易' }}</p>
+        <div class="header-group">
+          <Transition name="fade-slide" mode="out-in">
+            <h2 class="form-title" :key="isLogin ? 'login-t' : 'reg-t'">
+              {{ isLogin ? '登录账户' : '创建账户' }}
+            </h2>
+          </Transition>
+          <Transition name="fade-slide" mode="out-in">
+            <p class="form-subtitle" :key="isLogin ? 'login-s' : 'reg-s'">
+              {{ isLogin ? '欢迎回来' : '加入我们，开始交易' }}
+            </p>
+          </Transition>
+        </div>
 
         <el-form ref="formRef" :model="formData" :rules="rules" @submit.prevent="handleSubmit">
           <el-form-item prop="username">
@@ -49,22 +59,21 @@
             />
           </el-form-item>
 
-          <el-form-item v-if="!isLogin" prop="confirmPassword">
-            <el-input
-              v-model="formData.confirmPassword"
-              type="password"
-              placeholder="确认密码"
-              clearable
-              size="large"
-              show-password
-              :prefix-icon="Lock"
-            />
-          </el-form-item>
-
-          <div v-if="isLogin" class="form-remember">
-            <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-            <el-link type="primary" :underline="false">忘记密码？</el-link>
-          </div>
+          <Transition name="expand">
+            <div v-if="!isLogin" class="expand-wrapper">
+              <el-form-item prop="confirmPassword">
+                <el-input
+                  v-model="formData.confirmPassword"
+                  type="password"
+                  placeholder="确认密码"
+                  clearable
+                  size="large"
+                  show-password
+                  :prefix-icon="Lock"
+                />
+              </el-form-item>
+            </div>
+          </Transition>
 
           <el-button
             type="primary"
@@ -79,7 +88,7 @@
 
         <div class="form-toggle">
           <span>{{ isLogin ? '还没有账户？' : '已有账户？' }}</span>
-          <el-link type="primary" :underline="false" @click="toggleMode">
+          <el-link type="primary" :underline="false" @click="toggleMode" class="toggle-link">
             {{ isLogin ? '立即注册' : '返回登录' }}
           </el-link>
         </div>
@@ -98,6 +107,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 模块化：导入部分
+ */
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -105,21 +117,26 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { User, Lock, ChatDotRound, Postcard } from '@element-plus/icons-vue'
 
+/**
+ * 模块化：状态定义
+ */
 const router = useRouter()
 const authStore = useAuthStore()
 
-const isLogin = ref(true)
-const loading = ref(false)
-const rememberMe = ref(false)
+const isLogin = ref(true)      // 当前是否为登录模式
+const loading = ref(false)     // 提交加载状态
 const formRef = ref<FormInstance>()
 
+// 表单数据模型
 const formData = reactive({
   username: '',
   password: '',
   confirmPassword: '',
 })
 
-// 验证规则
+/**
+ * 模块化：验证规则
+ */
 const rules = {
   username: [
     { required: true, message: '用户名不能为空', trigger: 'blur' },
@@ -144,22 +161,28 @@ const rules = {
   ],
 }
 
+/**
+ * 模块化：业务逻辑方法
+ */
+
+// 切换登录/注册模式
 function toggleMode() {
   isLogin.value = !isLogin.value
   formRef.value?.resetFields()
 }
 
+// 表单提交处理
 async function handleSubmit() {
   if (!formRef.value) return
 
-  // 前端表单校验
+  // 1. 表单校验
   await formRef.value.validate(async (valid) => {
     if (!valid) return
 
     loading.value = true
     try {
+      // 2. 根据模式执行对应接口
       if (isLogin.value) {
-        // 登录业务
         await authStore.login({
             username: formData.username,
             password: formData.password
@@ -167,13 +190,12 @@ async function handleSubmit() {
         ElMessage.success('登录成功！')
         router.push('/')
       } else {
-        // 注册业务
         await authStore.register({
           username: formData.username,
           password: formData.password
         })
-        
         ElMessage.success('注册成功！请登录')
+        // 注册成功后自动切换回登录并清空密码
         isLogin.value = true
         formData.password = ''
         formData.confirmPassword = ''
@@ -191,7 +213,6 @@ async function handleSubmit() {
 .login-container {
   min-height: 100vh;
   display: flex;
-  // 优化渐变背景，更加柔和
   background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
@@ -203,7 +224,7 @@ async function handleSubmit() {
     padding: 40px;
     background-image: radial-gradient(#10b981 1px, transparent 1px);
     background-size: 40px 40px;
-    background-color: rgba(255, 255, 255, 0.3); // 增加一点纹理
+    background-color: rgba(255, 255, 255, 0.3);
 
     .brand-content {
       text-align: center;
@@ -213,12 +234,12 @@ async function handleSubmit() {
         width: 120px;
         height: 120px;
         margin: 0 auto 30px;
-        animation: float 6s ease-in-out infinite; // 放慢动画更优雅
+        animation: float 6s ease-in-out infinite;
       }
       .brand-title {
         font-size: 48px;
         font-weight: 800;
-        color: #065f46; // 使用实色代替渐变文字，兼容性更好
+        color: #065f46;
         margin-bottom: 10px;
         letter-spacing: -1px;
       }
@@ -235,17 +256,19 @@ async function handleSubmit() {
     padding: 20px;
 
     .form-card {
-      background: rgba(255, 255, 255, 0.95); // 轻微透明
-      backdrop-filter: blur(10px); // 毛玻璃效果
-      border-radius: 24px; // 更大的圆角
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
       padding: 48px;
-      box-shadow: 0 20px 50px -12px rgba(16, 185, 129, 0.25); // 优化阴影
+      box-shadow: 0 20px 50px -12px rgba(16, 185, 129, 0.15); // 调淡阴影
       width: 100%;
       max-width: 420px;
       transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
 
       .mobile-logo {
-        display: none; // 默认隐藏
+        display: none;
         align-items: center;
         justify-content: center;
         gap: 10px;
@@ -255,23 +278,29 @@ async function handleSubmit() {
         font-size: 20px;
       }
 
+      .header-group {
+        margin-bottom: 24px;
+        min-height: 80px; // 占位，防止切换时抖动太大
+      }
+
       .form-title {
         font-size: 28px;
         font-weight: 700;
-        color: #111827; // 深色标题更易读
+        color: #111827;
         margin-bottom: 8px;
       }
-      .form-subtitle { color: #6b7280; margin-bottom: 32px; }
+      .form-subtitle { color: #6b7280; }
 
       .el-form {
         :deep(.el-form-item) {
-          margin-bottom: 20px;
+          margin-bottom: 24px; // 增加间距
           .el-input__wrapper {
-            box-shadow: 0 0 0 1px #e5e7eb; // 默认边框更淡
+            box-shadow: 0 0 0 1px #e5e7eb;
             padding: 8px 12px;
-            background-color: #f9fafb; // 极淡的灰色背景
+            background-color: #f9fafb;
+            transition: all 0.2s;
             &.is-focus {
-              box-shadow: 0 0 0 1px #10b981 !important;
+              box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2), 0 0 0 1px #10b981 !important; // 优化聚焦效果
               background-color: #fff;
             }
           }
@@ -280,13 +309,14 @@ async function handleSubmit() {
 
       .form-button {
         width: 100%;
-        height: 48px;
+        height: 44px; // 稍微调小一点高度，更精致
         font-size: 16px;
         font-weight: 600;
         background: #10b981;
         border: none;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);
+        border-radius: 8px; // 调小圆角
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+        margin-top: 8px;
         
         &:hover {
           background: #059669;
@@ -300,16 +330,22 @@ async function handleSubmit() {
         text-align: center;
         font-size: 14px;
         color: #6b7280;
+        .toggle-link {
+          margin-left: 5px;
+          font-weight: 600;
+          color: #10b981;
+          &:hover { color: #059669; }
+        }
       }
 
       .form-divider {
-        margin: 30px 0;
+        margin: 24px 0;
         position: relative;
         text-align: center;
         &::after {
           content: "";
           position: absolute;
-          left: 0; top: 50%; width: 100%; height: 1px; background: #e5e7eb; z-index: 0;
+          left: 0; top: 50%; width: 100%; height: 1px; background: #f3f4f6; z-index: 0;
         }
         span {
           background: #fff; 
@@ -324,10 +360,11 @@ async function handleSubmit() {
       .social-login {
         display: flex;
         justify-content: center;
-        gap: 20px;
+        gap: 16px;
         .social-btn {
-          border-color: #e5e7eb;
-          color: #6b7280;
+          border-color: #f3f4f6;
+          color: #9ca3af;
+          transition: all 0.3s;
           &:hover {
              border-color: #10b981;
              color: #10b981;
@@ -342,28 +379,56 @@ async function handleSubmit() {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-15px); }
   }
+
+  // 过渡动画样式
+  // 1. 展开/收起过渡 (用于确认密码框)
+  .expand-enter-active,
+  .expand-leave-active {
+    transition: all 0.3s ease-in-out;
+    max-height: 100px;
+    opacity: 1;
+    overflow: hidden;
+  }
+  .expand-enter-from,
+  .expand-leave-to {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0 !important; // 消除 margin 影响
+    transform: translateY(-10px);
+  }
+
+  // 2. 文字淡入淡出位移 (用于标题)
+  .fade-slide-enter-active,
+  .fade-slide-leave-active {
+    transition: all 0.25s ease;
+  }
+  .fade-slide-enter-from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  .fade-slide-leave-to {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
 }
 
-// 响应式优化
+// 响应式
 @media (max-width: 768px) {
   .login-container {
-    .login-brand { display: none; } // 隐藏左侧大图
+    .login-brand { display: none; } 
     
     .login-form-container {
-      background: #fff; // 移动端背景纯白
+      background: #fff;
       padding: 0;
       
       .form-card {
-        box-shadow: none; // 去掉阴影
+        box-shadow: none;
         padding: 30px 24px;
         max-width: 100%;
-        height: 100vh; // 全屏
+        height: 100vh;
         border-radius: 0;
-        display: flex;
-        flex-direction: column;
         justify-content: center;
-
-        .mobile-logo { display: flex; } // 显示顶部小Logo
+        .mobile-logo { display: flex; }
       }
     }
   }

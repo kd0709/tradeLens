@@ -12,9 +12,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(loginData: LoginRequest) {
     const result = await authApi.login(loginData)
-  
+
+    console.log('登录接口返回结果:', result)
     token.value = result.token
     user.value = result 
+
+    console.log('登录成功，用户信息:', result.token)
 
     localStorage.setItem('token', result.token)
     localStorage.setItem('user', JSON.stringify(result))

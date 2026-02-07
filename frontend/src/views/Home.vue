@@ -1,13 +1,19 @@
 <template>
   <div class="home-page">
-    <div class="banner-section" v-if="banners.length > 0">
-      <div class="container">
-        <el-carousel :interval="4000" type="card" height="300px">
+    <div class="banner-section-wrapper">
+      <div class="banner-bg-decoration left"></div>
+      <div class="banner-bg-decoration right"></div>
+      
+      <div class="container banner-container">
+        <el-carousel :interval="5000" type="card" height="320px" indicator-position="outside">
           <el-carousel-item v-for="(item, index) in banners" :key="index">
             <div class="banner-item" :style="{ backgroundImage: `url(${item.img})` }">
+              <div class="banner-mask"></div>
               <div class="banner-content">
+                <span class="banner-tag">{{ item.tag }}</span>
                 <h3>{{ item.title }}</h3>
                 <p>{{ item.desc }}</p>
+                <el-button type="primary" round size="small" class="banner-btn">立即查看</el-button>
               </div>
             </div>
           </el-carousel-item>
@@ -17,15 +23,18 @@
 
     <div class="toolbar-section" :class="{ sticky: isSticky }">
       <div class="container toolbar-content">
-        <div class="category-list">
-          <span 
-            v-for="cat in categories" 
-            :key="cat.id" 
-            :class="['cat-item', { active: (queryParams.categoryId === cat.id) || (cat.id === 0 && !queryParams.categoryId) }]"
-            @click="handleCategoryChange(cat.id)"
-          >
-            {{ cat.name }}
-          </span>
+        <div class="category-scroll-wrapper">
+          <div class="category-list">
+            <span 
+              v-for="cat in categories" 
+              :key="cat.id" 
+              :class="['cat-item', { active: (queryParams.categoryId === cat.id) || (cat.id === 0 && !queryParams.categoryId) }]"
+              @click="handleCategoryChange(cat.id)"
+            >
+              {{ cat.name }}
+            </span>
+          </div>
+          <div class="scroll-mask"></div>
         </div>
 
         <div class="sort-list">
@@ -53,7 +62,7 @@
       </div>
     </div>
 
-    <div class="container product-grid">
+    <div class="container product-grid" v-loading="loading" element-loading-text="加载中..." element-loading-background="rgba(255, 255, 255, 0.6)">
       <div 
         v-for="item in productList" 
         :key="item.id" 
@@ -86,12 +95,22 @@
       </div>
     </div>
 
-    <div class="container loading-section">
-      <el-skeleton v-if="loading" :rows="3" animated />
-      <el-empty v-if="!loading && productList.length === 0" description="暂无相关商品" />
-      <div v-if="!loading && productList.length > 0" class="no-more">
-        - 到底啦，快去发布闲置吧 -
-      </div>
+    <div class="container pagination-section" v-if="total > 0 && !loading">
+      <el-pagination
+        v-model:current-page="queryParams.current"
+        v-model:page-size="queryParams.size"
+        :page-sizes="[12, 20, 32, 48]"
+        :background="true"
+        layout="total, prev, pager, next, jumper"
+        :total="total"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+        class="custom-pagination"
+      />
+    </div>
+
+    <div class="container empty-section" v-if="!loading && productList.length === 0">
+      <el-empty description="暂无相关商品，换个词试试？" />
     </div>
   </div>
 </template>
@@ -114,23 +133,49 @@ const route = useRoute()
 
 // 状态定义
 const loading = ref(false)
-const productList = ref<any[]>([]) // 直接使用后端返回的列表对象
+const productList = ref<any[]>([]) 
+const total = ref(0) // 新增：总条数
 const categories = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '全部' }])
 const isSticky = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-const banners = ref<any[]>([]) // 模拟数据已删除，预留接口位置
+
+// 模拟 Banner 数据
+const banners = ref<any[]>([
+  { 
+    title: '数码发烧友', 
+    desc: '低价淘大牌，旧机换新颜', 
+    tag: '热门活动',
+    img: 'https://picsum.photos/800/400?random=1' 
+  },
+  { 
+    title: '校园开学季', 
+    desc: '教材、生活用品一站式购齐', 
+    tag: '限时特惠',
+    img: 'https://picsum.photos/800/400?random=2' 
+  },
+  { 
+    title: '极客装备库', 
+    desc: '显卡、外设，硬核玩家的选择', 
+    tag: '新品上架',
+    img: 'https://picsum.photos/800/400?random=3' 
+  },
+  { 
+    title: '闲置书屋', 
+    desc: '让知识流动起来', 
+    tag: '图书漂流',
+    img: 'https://picsum.photos/800/400?random=4' 
+  }
+])
 
 // 查询参数
 const queryParams = reactive<ProductQuery>({
   current: 1,
-  size: 20,
+  size: 12,
   status: 2,
   categoryId: undefined,
   keyword: '',
   sort: undefined
 })
-
-
 
 // 加载分类数据
 const loadCategories = async () => {
@@ -161,9 +206,12 @@ const loadData = async () => {
     
     const res = await getProductList(params)
     productList.value = res.list || [] 
-    console.log('加载商品列表成功:', productList.value)
+    // 更新总条数，兼容后端可能返回 null 的情况
+    total.value = Number(res.total) || 0 
   } catch (error) {
     console.error('加载商品列表失败:', error)
+    productList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -172,26 +220,57 @@ const loadData = async () => {
 // --- 交互处理 ---
 
 const handleCategoryChange = (id: number) => {
+  if (queryParams.categoryId === id) return
+  
   queryParams.categoryId = id === 0 ? undefined : id
-  queryParams.current = 1
+  queryParams.current = 1 // 切换分类重置为第一页
   loadData()
 }
 
 const handleSortChange = (sortType: any) => {
+  if (queryParams.sort === sortType) return
+
   queryParams.sort = sortType
+  queryParams.current = 1 // 切换排序重置为第一页
   loadData()
 }
 
 const togglePriceSort = () => {
   queryParams.sort = queryParams.sort === 'price_asc' ? 'price_desc' : 'price_asc'
+  queryParams.current = 1
   loadData()
+}
+
+// 分页处理：改变每页条数
+const handleSizeChange = (val: number) => {
+  queryParams.size = val
+  queryParams.current = 1 // 改变每页条数时重置为第一页
+  loadData()
+  scrollToProductArea()
+}
+
+// 分页处理：翻页
+const handleCurrentChange = (val: number) => {
+  queryParams.current = val
+  loadData()
+  scrollToProductArea()
+}
+
+// 辅助：滚动到商品区域顶部
+const scrollToProductArea = () => {
+  const toolbar = document.querySelector('.toolbar-section')
+  if (toolbar) {
+    // 减去工具栏高度和一点间距，保留视觉连贯性
+    const top = toolbar.getBoundingClientRect().top + window.pageYOffset - 80
+    window.scrollTo({ top: top > 0 ? top : 0, behavior: 'smooth' })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 
 const goToDetail = (item: any) => {
   router.push(`/product/${item.id}`)
 }
-
-// --- 辅助工具 ---
 
 const getConditionText = (level: number) => {
   return { 1: '全新', 2: '99新', 3: '9成新', 4: '8成新' }[level] || '二手'
@@ -208,9 +287,9 @@ const highlightKeyword = (title: string) => {
   return title.replace(reg, (match) => `<span style="color: #10b981; font-weight:bold">${match}</span>`)
 }
 
-// 监听搜索词变化
 watch(() => route.query.q, (newVal) => {
   queryParams.keyword = (newVal as string) || ''
+  queryParams.current = 1 // 搜索时重置为第一页
   loadData()
 })
 
@@ -235,165 +314,175 @@ onMounted(async () => {
   padding: 0 20px;
 }
 
-/* 1. Banner 样式 */
-.banner-section {
-  padding-top: 24px;
+/* 1. Banner 区域样式 (保持不变) */
+.banner-section-wrapper {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ecfdf5 0%, #f9fafb 100%);
+  padding-top: 32px;
   margin-bottom: 24px;
-  
+
+  .banner-bg-decoration {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.6;
+    z-index: 0;
+    
+    &.left { background: #10b981; top: -100px; left: -100px; }
+    &.right { background: #34d399; bottom: -50px; right: -100px; }
+  }
+
+  .banner-container { position: relative; z-index: 1; }
+
   .banner-item {
     height: 100%;
-    border-radius: 12px;
+    border-radius: 16px;
     background-size: cover;
     background-position: center;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     
-    /* 渐变遮罩 */
-    &::after {
-      content: '';
+    .banner-mask {
       position: absolute;
       inset: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+      background: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%);
     }
     
     .banner-content {
-      position: absolute;
-      bottom: 40px;
-      left: 40px;
-      z-index: 2;
-      color: #fff;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      position: absolute; top: 50%; left: 48px; transform: translateY(-50%);
+      z-index: 2; color: #fff; max-width: 50%;
       
-      h3 { font-size: 28px; margin: 0 0 8px; font-weight: 700; }
-      p { font-size: 16px; margin: 0; opacity: 0.9; }
-    }
-  }
-}
-
-/* 2. 工具栏样式 */
-.toolbar-section {
-  position: sticky;
-  top: 64px; /* NavBar 高度 */
-  z-index: 10;
-  background: rgba(249, 250, 251, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  margin-bottom: 24px;
-  transition: all 0.3s;
-  
-  .toolbar-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .category-list {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    
-    .cat-item {
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      color: #4b5563;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-      
-      &:hover { border-color: #10b981; color: #10b981; }
-      &.active { background: #10b981; color: #fff; border-color: #10b981; }
-    }
-  }
-  
-  .sort-list {
-    display: flex;
-    gap: 24px;
-    font-size: 14px;
-    color: #6b7280;
-    
-    .sort-item {
-      cursor: pointer;
-      &:hover { color: #10b981; }
-      &.active { color: #10b981; font-weight: 600; }
-      
-      &.price-sort {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        .icon { font-size: 12px; }
+      .banner-tag {
+        display: inline-block; padding: 4px 10px;
+        background: rgba(16, 185, 129, 0.9); border-radius: 20px;
+        font-size: 12px; font-weight: 600; margin-bottom: 12px;
+        backdrop-filter: blur(4px);
+      }
+      h3 { font-size: 32px; margin: 0 0 12px; font-weight: 800; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+      p { font-size: 16px; margin: 0 0 24px; opacity: 0.9; line-height: 1.5; }
+      .banner-btn {
+        background: #fff; color: #059669; border: none; font-weight: 600;
+        &:hover { background: #f0fdf4; transform: translateY(-2px); }
       }
     }
   }
 }
 
-/* 3. 商品网格 */
+/* 2. 工具栏样式 (保持不变) */
+.toolbar-section {
+  position: sticky; top: 64px; z-index: 10;
+  background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px);
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  transition: all 0.3s;
+  
+  .toolbar-content {
+    display: flex; justify-content: space-between; align-items: center; gap: 24px;
+  }
+  
+  .category-scroll-wrapper {
+    flex: 1; position: relative; overflow: hidden;
+    .category-list {
+      display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; padding-right: 20px;
+      &::-webkit-scrollbar { display: none; }
+      scrollbar-width: none;
+      .cat-item {
+        flex-shrink: 0; padding: 8px 18px; border-radius: 12px;
+        font-size: 14px; font-weight: 500; color: #4b5563; background: #fff; border: 1px solid #e5e7eb;
+        cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        &:hover { border-color: #10b981; color: #10b981; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.15); }
+        &:active { transform: translateY(0); }
+        &.active { background: #10b981; color: #fff; border-color: #10b981; box-shadow: 0 4px 10px -2px rgba(16, 185, 129, 0.4); }
+      }
+    }
+    .scroll-mask {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 40px;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.9)); pointer-events: none;
+    }
+  }
+  
+  .sort-list {
+    flex-shrink: 0; display: flex; gap: 16px; padding-left: 16px; border-left: 1px solid #f3f4f6;
+    .sort-item {
+      font-size: 14px; color: #6b7280; cursor: pointer; padding: 6px 12px; border-radius: 8px; transition: all 0.2s;
+      &:hover, &.active { color: #10b981; background-color: #ecfdf5; }
+      &.active { font-weight: 600; }
+      &.price-sort { display: flex; align-items: center; gap: 4px; .icon { font-size: 12px; } }
+    }
+  }
+}
+
+/* 3. 商品网格样式 (保持不变) */
 .product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 24px;
-  padding-bottom: 40px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 24px; padding-bottom: 20px; min-height: 300px; // 防止加载时高度塌陷
 }
 
 .product-card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: 1px solid transparent;
+  background: #fff; border-radius: 16px; overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer; border: 1px solid transparent; position: relative;
   
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
-    border-color: #e5e7eb;
+    transform: translateY(-8px); box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
   }
 
   .image-wrapper {
-    position: relative;
-    aspect-ratio: 1;
-    background: #f3f4f6;
-    
-    img { width: 100%; height: 100%; object-fit: cover; }
+    position: relative; aspect-ratio: 1; background: #f3f4f6; overflow: hidden;
+    img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+    &:hover img { transform: scale(1.05); }
     .condition-tag {
-      position: absolute; top: 8px; left: 8px;
-      background: rgba(0, 0, 0, 0.6); color: #fff;
-      font-size: 12px; padding: 2px 6px; border-radius: 4px;
-      backdrop-filter: blur(4px);
+      position: absolute; top: 12px; left: 12px;
+      background: rgba(255, 255, 255, 0.9); color: #059669; font-size: 12px; font-weight: 600;
+      padding: 4px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
   }
 
   .info {
-    padding: 12px;
-    
+    padding: 16px;
     .title {
-      font-size: 15px; color: #1f2937; margin: 0 0 8px;
-      line-height: 1.4; height: 42px; /* 限制2行高度 */
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      font-size: 16px; color: #1f2937; margin: 0 0 12px; line-height: 1.5; height: 48px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500;
     }
-    
     .price-row {
-      display: flex; align-items: baseline; margin-bottom: 8px;
-      .currency { font-size: 12px; color: #ef4444; font-weight: bold; }
-      .price { font-size: 18px; color: #ef4444; font-weight: bold; margin-right: auto; }
-      .view-count { font-size: 12px; color: #9ca3af; }
+      display: flex; align-items: baseline; margin-bottom: 12px;
+      .currency { font-size: 14px; color: #ef4444; font-weight: bold; margin-right: 2px;}
+      .price { font-size: 20px; color: #ef4444; font-weight: 800; margin-right: auto; }
+      .view-count { font-size: 12px; color: #9ca3af; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;}
     }
-    
     .seller-row {
-      display: flex; align-items: center; gap: 6px;
-      padding-top: 8px; border-top: 1px solid #f9fafb;
-      .name { font-size: 12px; color: #6b7280; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .time { font-size: 12px; color: #d1d5db; }
+      display: flex; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid #f9fafb;
+      .name { font-size: 13px; color: #4b5563; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .time { font-size: 12px; color: #9ca3af; }
     }
   }
 }
 
-.loading-section {
-  text-align: center;
-  padding: 40px 0;
-  .no-more { color: #d1d5db; font-size: 13px; margin-top: 20px; }
+/* 4. 分页区域样式 */
+.pagination-section {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0 60px;
+  
+  :deep(.custom-pagination) {
+    /* 自定义 Element Plus 分页样式微调 */
+    .el-pagination__total { margin-right: 16px; color: #6b7280; }
+    .el-pager li {
+      background: #fff; border: 1px solid #e5e7eb; font-weight: 500;
+      &:hover { color: #10b981; border-color: #10b981; }
+      &.is-active { background-color: #10b981 !important; border-color: #10b981; color: #fff; }
+    }
+    .btn-prev, .btn-next { background: #fff; border: 1px solid #e5e7eb; }
+  }
+}
+
+.empty-section {
+  padding: 60px 0;
 }
 </style>

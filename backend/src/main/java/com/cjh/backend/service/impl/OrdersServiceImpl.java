@@ -179,7 +179,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         if (order == null || !order.getSellerId().equals(sellerId)) {
             throw new RuntimeException("订单不存在或无权限");
         }
-        if (order.getStatus() != 2) {
+            if (order.getStatus() != 2) {
             throw new RuntimeException("订单状态不允许发货");
         }
 

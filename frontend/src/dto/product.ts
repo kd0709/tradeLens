@@ -1,5 +1,3 @@
-import type { UserInfo } from './auth'
-
 // 对应接口文档中的 ProductDetailDto
 export interface ProductDto {
   id: number
@@ -26,6 +24,8 @@ export interface ProductPublishDto {
   title: string
   description: string
   price: number
+  quantity: number        
+  negotiable: 0 | 1       
   categoryId: number
   conditionLevel: number
   images: string[]
