@@ -107,9 +107,7 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 模块化：导入部分
- */
+
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -117,26 +115,20 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { User, Lock, ChatDotRound, Postcard } from '@element-plus/icons-vue'
 
-/**
- * 模块化：状态定义
- */
+
 const router = useRouter()
 const authStore = useAuthStore()
 
-const isLogin = ref(true)      // 当前是否为登录模式
-const loading = ref(false)     // 提交加载状态
+const isLogin = ref(true)      
+const loading = ref(false)     
 const formRef = ref<FormInstance>()
 
-// 表单数据模型
 const formData = reactive({
   username: '',
   password: '',
   confirmPassword: '',
 })
 
-/**
- * 模块化：验证规则
- */
 const rules = {
   username: [
     { required: true, message: '用户名不能为空', trigger: 'blur' },
@@ -161,27 +153,21 @@ const rules = {
   ],
 }
 
-/**
- * 模块化：业务逻辑方法
- */
 
-// 切换登录/注册模式
 function toggleMode() {
   isLogin.value = !isLogin.value
   formRef.value?.resetFields()
 }
 
-// 表单提交处理
+
 async function handleSubmit() {
   if (!formRef.value) return
 
-  // 1. 表单校验
   await formRef.value.validate(async (valid) => {
     if (!valid) return
 
     loading.value = true
     try {
-      // 2. 根据模式执行对应接口
       if (isLogin.value) {
         await authStore.login({
             username: formData.username,
@@ -195,7 +181,6 @@ async function handleSubmit() {
           password: formData.password
         })
         ElMessage.success('注册成功！请登录')
-        // 注册成功后自动切换回登录并清空密码
         isLogin.value = true
         formData.password = ''
         formData.confirmPassword = ''

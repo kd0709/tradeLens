@@ -64,7 +64,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .collect(Collectors.toMap(
                         SalesStatisticsDto.DailySalesDto::getDate,
                         SalesStatisticsDto.DailySalesDto::getAmount,
-                        (v1, v2) -> v1 // 如果有重复日期(通常SQL group by保证了不会有)，取第一个
+                        (v1, v2) -> v1 // 如果有重复日期，取第一个
                 ));
 
         // 3.3 构造完整的 7 天数据列表
@@ -84,7 +84,7 @@ public class StatisticsServiceImpl implements StatisticsService {
             SalesStatisticsDto.DailySalesDto dailyDto = new SalesStatisticsDto.DailySalesDto();
             dailyDto.setDate(dateStr);
 
-            // 核心补零逻辑：去 Map 里找，找不到就给 ZERO
+
             BigDecimal amount = salesMap.getOrDefault(dateStr, BigDecimal.ZERO);
             dailyDto.setAmount(amount);
 

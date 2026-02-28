@@ -26,7 +26,6 @@
         is_deleted,create_time,update_time
     </sql>
 
-    <!-- 更新用户资料（动态 set，只更新非空字段） -->
     <update id="updateUserProfile">
         UPDATE user
         <set>
@@ -71,7 +70,7 @@
         FROM tradelens.user u
         LEFT JOIN tradelens.product p ON p.user_id = u.id
         AND p.is_deleted = 0
-        AND p.product_status IN (1, 2, 3)  <!-- 待审核、上架、交易中 -->
+        AND p.product_status IN (1, 2, 3)
         WHERE u.id = #{sellerId}
         AND u.status = 1
         AND u.is_deleted = 0

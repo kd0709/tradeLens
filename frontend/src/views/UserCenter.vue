@@ -306,7 +306,7 @@ import { ref, onMounted, reactive, watch, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Location, Money, Goods, Wallet } from '@element-plus/icons-vue' // 补全图标引入
+import { Plus, Location, Money, Goods, Wallet } from '@element-plus/icons-vue' 
 import { getFullImageUrl } from '@/utils/image'
 import * as echarts from 'echarts'
 
@@ -327,6 +327,7 @@ import type { ProductMyDto } from '@/dto/product'
 import type { CommentPublishDto } from '@/dto/comment'
 import type { UploadRequestOptions } from 'element-plus'
 
+// 状态
 const router = useRouter()
 const authStore = useAuthStore()
 const activeTab = ref('profile')
@@ -339,14 +340,14 @@ const sellerOrders = ref<OrderDto[]>([])
 const myProducts = ref<ProductMyDto[]>([])
 const addressList = ref<AddressDto[]>([])
 
-// --- 统计模块相关变量 ---
+// 统计变量 
 const trendChartRef = ref<HTMLElement | null>(null)
 const categoryChartRef = ref<HTMLElement | null>(null)
 let trendChartInstance: echarts.ECharts | null = null
 let categoryChartInstance: echarts.ECharts | null = null
 const cachedStats = ref<SalesStatisticsDto | null>(null)
 
-// 核心指标数据
+// echarts数据
 const statsData = reactive({
   totalAmount: '0.00',
   totalOrders: 0,
@@ -374,7 +375,7 @@ const addressDialogVisible = ref(false)
 const commentDialogVisible = ref(false)
 const isEditAddress = ref(false)
 
-// --- 1. 用户信息相关 ---
+// 用户信息相关 
 const initUserInfo = () => {
   if (authStore.user) {
     userInfoForm.avatar = authStore.user.avatar || ''
@@ -415,14 +416,13 @@ const handleAvatarUpload = async (options: UploadRequestOptions) => {
   } catch (error) { ElMessage.error('图片上传失败') }
 }
 
-// --- 2. 统计图表逻辑 ---
+// 统计图表逻辑 
 const initCharts = () => {
   if (!trendChartRef.value || !categoryChartRef.value) return
   if (!cachedStats.value) return
 
   const data = cachedStats.value
 
-  // 渲染趋势图
   if (!trendChartInstance) trendChartInstance = echarts.init(trendChartRef.value)
   
   const xAxisData = data.last7DaysTrend.map(item => item.date)
@@ -510,7 +510,6 @@ const loadData = async () => {
   } catch (error) { console.error(error) }
 }
 
-// 辅助函数
 const getStatusText = (s: number) => ({ 
   1: '待支付', 
   2: '待发货', 
@@ -527,7 +526,6 @@ const getStatusClass = (s: number) => ({
 
 const formatDate = (str: string) => str ? str.replace('T', ' ').split('.')[0] : ''
 
-// 订单操作
 const handlePay = (o: OrderDto) => router.push(`/pay/${o.orderNo}`)
 const openDeliverDialog = (o: OrderDto) => { 
   currentOrderNo.value = o.orderNo; 
@@ -563,7 +561,6 @@ const submitComment = async () => {
   loadData() 
 }
 
-// 地址操作
 const openAddressDialog = (row?: AddressDto) => {
   isEditAddress.value = !!row
   Object.assign(addressForm, row || { id: undefined, receiverName: '', receiverPhone: '', province: '', city: '', district: '', detailAddress: '', isDefault: 0 })
@@ -580,7 +577,6 @@ const handleDeleteAddress = async (id: number) => {
   try { await ElMessageBox.confirm('确定删除吗？'); await deleteAddress(id); loadData() } catch (e) {}
 }
 
-// 商品操作
 const handleToggleStatus = async (prod: any) => {
   try {
     await ElMessageBox.confirm(`确定要${prod.productStatus === 2 ? '下架' : '上架'}吗？`)
@@ -592,7 +588,6 @@ const handleDeleteProduct = async (id: number) => {
   try { await ElMessageBox.confirm('确定删除吗？'); await deleteProduct(id); loadData() } catch (e) {}
 }
 
-// Watchers & Listeners
 watch(activeTab, (newVal) => {
   if (newVal === 'stats') {
     nextTick(() => {

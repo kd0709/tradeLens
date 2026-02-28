@@ -15,23 +15,11 @@ import java.util.List;
 */
 public interface CartService extends IService<Cart> {
 
-    /**
-     * 加入购物车
-     */
     Long addToCart(Long userId, AddToCartDto dto);
 
-    /**
-     * 购物车列表
-     */
     List<CartListDto> listCart(Long userId);
 
-    /**
-     * 更新购物车数量
-     */
     void updateQuantity(Long userId, UpdateCartQuantityDto dto);
 
-    /**
-     * 删除购物车项（支持批量）
-     */
     void deleteCartItems(Long userId, List<Long> cartIds);
 }

@@ -20,7 +20,6 @@ public interface UserMapper extends BaseMapper<User> {
 
     /**
      * 根据用户ID查询基本信息（正常状态的用户）
-     * 简单查询，使用注解写
      */
     @Select("""
         SELECT 
@@ -51,7 +50,6 @@ public interface UserMapper extends BaseMapper<User> {
     @Select("SELECT password FROM tradelens.user WHERE id = #{userId} AND status = 1 AND is_deleted = 0 LIMIT 1")
     String getPasswordById(@Param("userId") Long userId);
 
-    // 更新密码（XML 实现）
     int updatePassword(
             @Param("userId") Long userId,
             @Param("newPassword") String newPassword

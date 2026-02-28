@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import AdminLayout from '../layout/AdminLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,12 +58,62 @@ const router = createRouter({
       component: () => import('../views/Cart.vue'),
       meta: { requiresAuth: true }
     },
+
+    // 后台管理路由组
+    {
+      path: '/admin',
+      component: AdminLayout,
+      redirect: '/admin/dashboard',
+      meta: { requiresAuth: true, requiresAdmin: true },
+      children: [
+        {
+          path: 'dashboard',
+          name: 'AdminDashboard',
+          component: () => import('@/views/admin/Dashboard.vue'),
+          meta: { title: '数据看板' }
+        },
+        {
+          path: 'users',
+          name: 'AdminUsers',
+          component: () => import('@/views/admin/UserManage.vue'),
+          meta: { title: '用户管理' }
+        },
+        {
+          path: 'categories',
+          name: 'AdminCategories',
+          component: () => import('@/views/admin/CategoryManage.vue'),
+          meta: { title: '分类管理' }
+        },
+        {
+          path: 'products',
+          name: 'AdminProducts',
+          component: () => import('@/views/admin/ProductManage.vue'),
+          meta: { title: '商品管理' }
+        },
+        {
+          path: 'orders',
+          name: 'AdminOrders',
+          component: () => import('@/views/admin/OrderManage.vue'),
+          meta: { title: '订单管理' }
+        },
+        {
+          path: 'comments',
+          name: 'AdminComments',
+          component: () => import('@/views/admin/CommentManage.vue'),
+          meta: { title: '评价管理' }
+        }
+      ]
+    }
+
+
+
+
   ]
 })
 
 // 简单的全局路由守卫（检查需要登录的页面）
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token') //  token 存在 localStorage
+  const token = localStorage.getItem('token') 
   if (to.meta.requiresAuth && !token) {
     next('/login')
   } else {

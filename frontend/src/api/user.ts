@@ -18,4 +18,3 @@ export function updateUserPassword(oldPassword: string, newPassword: string): Pr
   return request.put('/api/user/password', { oldPassword, newPassword })
 }
 
-// 获取用户收藏的商品列表

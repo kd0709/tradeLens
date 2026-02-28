@@ -89,32 +89,29 @@ const payType = ref<'wechat' | 'alipay'>('wechat')
 const order = ref<OrderDto | null>(null)
 const paying = ref(false)
 
-// 加载订单信息
 const loadOrder = async () => {
-  const orderNo = route.params.id as string  // 后端使用orderNo而非id
+  const orderNo = route.params.id as string  
   if (!orderNo) return
   try {
     order.value = await getOrderDetail(orderNo)
-    if (order.value.status !== 1) {  // 使用status而非orderStatus
+    if (order.value.status !== 1) {  
       ElMessage.warning('该订单无需支付')
       router.replace('/user')
     }
   } catch (e) { console.error(e) }
 }
 
-// 确认支付
 const handleConfirmPay = async () => {
   if (!order.value) return
   paying.value = true
   
   try {
-    // 后端需要orderNo和payType
     await payOrder({ 
       orderNo: order.value.orderNo, 
       payType: payType.value 
     })
     ElMessage.success('支付成功！')
-    router.replace('/user') // 回到用户中心查看状态
+    router.replace('/user') 
   } catch (e) {
     console.error(e)
   } finally {

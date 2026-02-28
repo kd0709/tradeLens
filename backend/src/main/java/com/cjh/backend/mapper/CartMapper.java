@@ -19,6 +19,7 @@ import java.util.List;
 
 @Mapper
 public interface CartMapper extends BaseMapper<Cart> {
+
     /**
      * 查询当前用户购物车列表（关联商品信息）
      */

@@ -54,7 +54,7 @@
         update_time = NOW()
         WHERE id = #{id}
         AND user_id = #{userId}
-        AND product_status IN (2, 3)   <!-- 允许从 上架/下架 变更 -->
+        AND product_status IN (2, 3)
         AND is_deleted = 0
     </update>
 
@@ -66,8 +66,6 @@
         WHERE id = #{id}
         AND user_id = #{userId}
         AND is_deleted = 0
-        <!-- 可选限制：只允许删除某些状态的商品 -->
-        <!-- AND product_status IN (1, 2, 5) -->
     </update>
 
     <select id="listMyProducts" resultType="com.cjh.backend.dto.Product.ProductMyDto">

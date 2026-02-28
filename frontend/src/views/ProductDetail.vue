@@ -109,15 +109,12 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 模块化：导入
- */
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { View, Star, ShoppingCart } from '@element-plus/icons-vue' // 导入图标
+import { View, Star, ShoppingCart } from '@element-plus/icons-vue'
 
-// API & DTO
+// API DTO
 import { getProductDetail } from '@/api/product'
 import { addToCart } from '@/api/cart'
 import { toggleFavorite } from '@/api/favorite'
@@ -125,9 +122,7 @@ import type { ProductDto } from '@/dto/product'
 import { getFullImageUrl } from '@/utils/image'
 import type { FavoriteToggleDto } from '@/dto/favorite'
 
-/**
- * 模块化：状态管理
- */
+// 状态管理
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
@@ -135,9 +130,7 @@ const product = ref<ProductDto | null>(null)
 const currentImage = ref('')
 const isLiked = ref(false)
 
-/**
- * 模块化：辅助函数
- */
+
 const getConditionText = (level: number) => {
   const map: Record<number, string> = { 1: '全新', 2: '99新', 3: '9成新', 4: '8成新' }
   return map[level] || '二手'
@@ -148,10 +141,6 @@ const formatDate = (dateStr: string) => {
   return dateStr.split('T')[0]
 }
 
-/**
- * 模块化：API 交互逻辑
- */
-// 加载详情
 const loadDetail = async () => {
   const id = Number(route.params.id)
   if (!id) return
@@ -160,11 +149,7 @@ const loadDetail = async () => {
   try {
     const res = await getProductDetail(id)
     product.value = res as ProductDto
-    
-    // 设置收藏状态
     isLiked.value = (product.value as any).isFavorited || false
-    
-    // 初始化主图
     if (product.value?.images && product.value.images.length > 0) {
       currentImage.value = getFullImageUrl(product.value.images[0])
     }
@@ -176,10 +161,7 @@ const loadDetail = async () => {
   }
 }
 
-/**
- * 模块化：用户交互处理
- */
-// 购买
+
 const handleBuy = () => {
   if (!product.value) return
   router.push({ 
@@ -188,7 +170,6 @@ const handleBuy = () => {
   })
 }
 
-// 加入购物车
 const handleAddToCart = async () => {
   if (!product.value) return
   try {
@@ -200,17 +181,14 @@ const handleAddToCart = async () => {
   }
 }
 
-// 收藏 / 取消收藏
 const toggleLike = async () => {
   if (!product.value) return
   try { 
-    // 乐观更新 UI，提升体验
     isLiked.value = !isLiked.value
     
     const toggleDto: FavoriteToggleDto = { productId: product.value.id }
     const serverStatus = await toggleFavorite(toggleDto)
     
-    // 以服务端返回状态为准矫正
     if (serverStatus !== isLiked.value) {
         isLiked.value = serverStatus
     }
@@ -218,20 +196,14 @@ const toggleLike = async () => {
     ElMessage.success(serverStatus ? '已添加至收藏夹' : '已取消收藏')
   } catch (error) {
     console.error(error)
-    // 失败回滚
     isLiked.value = !isLiked.value 
     ElMessage.error('操作失败')
   }
 }
 
-// 私聊 (留白)
 const handleChat = () => {
   ElMessage.info('私信聊天功能正在开发中，敬请期待...')
 }
-
-/**
- * 模块化：生命周期
- */
 onMounted(() => {
   loadDetail()
 })

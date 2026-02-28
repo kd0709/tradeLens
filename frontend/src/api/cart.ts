@@ -16,7 +16,7 @@ export function updateCartQuantity(data: UpdateCartQuantityDto): Promise<void> {
   return request.put('/api/cart/update', data)
 }
 
-// 删除购物车商品 (支持批量)
+// 删除购物车商品
 export function deleteCartItems(cartIds: number[]): Promise<void> {
   return request.delete('/api/cart/delete', {
     params: { cartIds }   

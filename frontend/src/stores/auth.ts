@@ -6,7 +6,7 @@ import * as authApi from '../api/auth'
 export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<UserInfo | null>(null)
-  const token = ref<string>(localStorage.getItem('token') || '') // 直接初始化，简化 initAuth
+  const token = ref<string>(localStorage.getItem('token') || '') 
   const isLoggedIn = computed(() => !!token.value)
 
 
@@ -23,16 +23,12 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('user', JSON.stringify(result))
   }
 
-  /**
-   * 注册
-   */
+
   async function register(registerData: RegisterRequest) {
     await authApi.register(registerData)
   }
 
-  /**
-   * 登出
-   */
+
   async function logout() {
     try {
       await authApi.logout()
@@ -45,9 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /**
-   * 初始化时从本地恢复用户信息
-   */
+
   function initAuth() {
     const savedUser = localStorage.getItem('user')
     if (savedUser) {

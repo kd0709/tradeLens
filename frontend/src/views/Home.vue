@@ -139,7 +139,6 @@ const categories = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '全
 const isSticky = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-// 模拟 Banner 数据
 const banners = ref<any[]>([
   { 
     title: '数码发烧友', 
@@ -177,7 +176,6 @@ const queryParams = reactive<ProductQuery>({
   sort: undefined
 })
 
-// 加载分类数据
 const loadCategories = async () => {
   try {
     const catList = await getCategoryList()
@@ -190,7 +188,6 @@ const loadCategories = async () => {
   }
 }
 
-// 加载商品数据
 const loadData = async () => {
   loading.value = true
   try {
@@ -206,7 +203,6 @@ const loadData = async () => {
     
     const res = await getProductList(params)
     productList.value = res.list || [] 
-    // 更新总条数，兼容后端可能返回 null 的情况
     total.value = Number(res.total) || 0 
   } catch (error) {
     console.error('加载商品列表失败:', error)
@@ -217,13 +213,12 @@ const loadData = async () => {
   }
 }
 
-// --- 交互处理 ---
 
 const handleCategoryChange = (id: number) => {
   if (queryParams.categoryId === id) return
   
   queryParams.categoryId = id === 0 ? undefined : id
-  queryParams.current = 1 // 切换分类重置为第一页
+  queryParams.current = 1 
   loadData()
 }
 
@@ -231,7 +226,7 @@ const handleSortChange = (sortType: any) => {
   if (queryParams.sort === sortType) return
 
   queryParams.sort = sortType
-  queryParams.current = 1 // 切换排序重置为第一页
+  queryParams.current = 1 
   loadData()
 }
 
@@ -241,26 +236,22 @@ const togglePriceSort = () => {
   loadData()
 }
 
-// 分页处理：改变每页条数
 const handleSizeChange = (val: number) => {
   queryParams.size = val
-  queryParams.current = 1 // 改变每页条数时重置为第一页
+  queryParams.current = 1
   loadData()
   scrollToProductArea()
 }
 
-// 分页处理：翻页
 const handleCurrentChange = (val: number) => {
   queryParams.current = val
   loadData()
   scrollToProductArea()
 }
 
-// 辅助：滚动到商品区域顶部
 const scrollToProductArea = () => {
   const toolbar = document.querySelector('.toolbar-section')
   if (toolbar) {
-    // 减去工具栏高度和一点间距，保留视觉连贯性
     const top = toolbar.getBoundingClientRect().top + window.pageYOffset - 80
     window.scrollTo({ top: top > 0 ? top : 0, behavior: 'smooth' })
   } else {

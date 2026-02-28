@@ -145,9 +145,6 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 模块化：导入
- */
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
@@ -156,12 +153,10 @@ import type { FormInstance, UploadRequestOptions, UploadUserFile } from 'element
 import { uploadFile } from '@/api/common'
 import { publishProduct } from '@/api/product'
 import { getCategoryList } from '@/api/category'
-// 🔥 导入类型定义
+
 import type { ProductPublishDto } from '@/dto/product'
 
-/**
- * 模块化：状态管理
- */
+// 状态管理
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
@@ -169,22 +164,19 @@ const fileList = ref<UploadUserFile[]>([])
 const categories = ref<Array<{ id: number; name: string }>>([])
 const uploadedImages = ref<string[]>([]) 
 
-// 🔥 使用 ProductPublishDto 类型定义表单数据
-// Partial 是因为初始状态下某些必填字段可能为空（如 categoryId），直到用户填写
+
 const form = reactive<Partial<ProductPublishDto>>({
   title: '',
   description: '',
   price: undefined,     
-  quantity: 1,          // 默认库存1
-  negotiable: 1,        // 默认可议价
+  quantity: 1,          
+  negotiable: 1,       
   categoryId: undefined,
-  conditionLevel: 2,    // 默认几乎全新
+  conditionLevel: 2,    
   images: []
 })
 
-/**
- * 模块化：验证规则
- */
+
 const rules = {
   title: [{ required: true, message: '请输入商品标题', trigger: 'blur' }],
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
@@ -205,9 +197,7 @@ const rules = {
   }]
 }
 
-/**
- * 模块化：上传逻辑
- */
+
 const handleRemove = (uploadFile: UploadUserFile) => {
   const resp = uploadFile.response
   let urlToRemove = null
@@ -249,9 +239,6 @@ const handleUpload = async (options: UploadRequestOptions) => {
   }
 }
 
-/**
- * 模块化：数据加载与提交
- */
 const loadCategories = async () => {
   if (categories.value.length > 0) return
   try {
@@ -275,8 +262,6 @@ const submitForm = async () => {
 
     submitting.value = true
     try {
-      // 构造提交数据，显式指定类型确保字段匹配
-      // 使用 ! 断言必填字段不为空（已通过 validate 校验）
       const payload: ProductPublishDto = {
         title: form.title!,
         description: form.description || '',
@@ -305,6 +290,9 @@ onMounted(() => {
   loadCategories()
 })
 </script>
+
+
+
 
 <style scoped lang="scss">
 .publish-page {

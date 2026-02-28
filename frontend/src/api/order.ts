@@ -3,23 +3,24 @@ import type { OrderDto, OrderQuery , CreateOrderDto, OrderPayDto, OrderDeliverDt
 import type { PageResult } from '@/dto/common'
 
 
-// 创建订单 (保持不变)
+// 创建订单 
 export function createOrder(data: CreateOrderDto): Promise<any> {
   return request.post('/api/order/create', data)
 }
 
 
-// 订单列表接口（后端返回PageDto格式）
+// 订单列表接口
 export function getBuyerOrders(query: OrderQuery): Promise<PageResult<OrderDto>> {
   return request.get('/api/order/buyer/list', { 
     params: { 
-      current: query.current,  // 后端使用current作为页码参数
+      current: query.current, 
       size: query.size,
       status: query.status 
     } 
   })
 }
 
+// 获取卖家订单列表
 export function getSellerOrders(query: OrderQuery): Promise<PageResult<OrderDto>> {
   return request.get('/api/order/seller/list', { 
     params: { 

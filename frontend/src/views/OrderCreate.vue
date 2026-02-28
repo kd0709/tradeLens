@@ -5,7 +5,6 @@
         <el-page-header @back="router.back()" content="确认订单" />
       </div>
 
-      <!-- 收货地址 -->
       <div class="section-card address-section">
         <div class="card-title">
           <span>收货地址</span>
@@ -41,7 +40,6 @@
         </div>
       </div>
 
-      <!-- 商品清单 -->
       <div v-if="orderItems.length" class="section-card product-section">
         <div class="card-title">商品清单 ({{ orderItems.length }})</div>
 
@@ -89,7 +87,6 @@
 
     </div>
 
-    <!-- 底部操作栏 -->
     <div class="bottom-bar" v-if="orderItems.length">
       <div class="bar-container">
         <div class="total-box">
@@ -109,7 +106,6 @@
       </div>
     </div>
 
-    <!-- 新增地址弹窗 -->
     <el-dialog
       v-model="addressDialogVisible"
       title="新增收货地址"
@@ -194,7 +190,7 @@ const orderItems = ref<Array<{
   price: number
   image: string
   conditionLevel?: number
-  quantity: number // 购物车可能有，单买默认为1
+  quantity: number 
 }>>([])
 const addressForm = reactive<Partial<AddressDto>>({
   receiverName: '',
@@ -206,7 +202,6 @@ const addressForm = reactive<Partial<AddressDto>>({
   isDefault: 0
 })
 
-// 地址表单验证规则
 const addressRules = {
   receiverName: [{ required: true, message: '请输入收货人姓名', trigger: 'blur' }],
   receiverPhone: [
@@ -215,8 +210,6 @@ const addressRules = {
   ],
   detailAddress: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
 }
-
-// 计算总价
 const totalPrice = computed(() => {
   const sum = orderItems.value.reduce((acc, item) => {
     const qty = item.quantity || 1
@@ -225,7 +218,6 @@ const totalPrice = computed(() => {
   return sum.toFixed(2)
 })
 
-// 获取状态文本
 const getConditionText = (level?: number) => {
   if (!level) return ''
   const map: Record<number, string> = {
@@ -263,7 +255,6 @@ const initData = async () => {
     const { productId, cartIds } = route.query
 
     if (productId) {
-      // 单商品购买
       const pid = Number(productId)
       if (isNaN(pid)) {
         ElMessage.warning('无效的商品ID')
@@ -271,7 +262,6 @@ const initData = async () => {
       }
 
       const detail = await getProductDetail(pid)
-      // 假设返回的是 ProductDto 结构
       orderItems.value = [{
         productId: detail.id,
         title: detail.title,
@@ -281,7 +271,6 @@ const initData = async () => {
         quantity: 1
       }]
     } else if (cartIds) {
-      // 购物车结算
       const ids = String(cartIds)
         .split(',')
         .map(id => Number(id.trim()))
@@ -327,7 +316,6 @@ const handleSaveAddress = async () => {
     ElMessage.success('地址添加成功')
     addressDialogVisible.value = false
 
-    // 重置表单
     Object.assign(addressForm, {
       receiverName: '',
       receiverPhone: '',
@@ -339,7 +327,6 @@ const handleSaveAddress = async () => {
 
     await loadAddresses()
   } catch (err) {
-    // 校验失败或接口失败不额外提示，element-plus 会显示
   }
 }
 
@@ -351,8 +338,6 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
-    // 当前后端接口只支持单商品下单 → 需逐个调用
-    // 建议未来后端提供批量接口：createBatchOrder({ items: [{productId, quantity, addressId}] })
     const promises = orderItems.value.map(item => {
       const dto: CreateOrderDto = {
         productId: item.productId,
@@ -375,7 +360,6 @@ const handleSubmit = async () => {
     }
   } catch (err) {
     console.error('创建订单失败', err)
-    // 错误提示建议由 axios 拦截器统一处理
   } finally {
     submitting.value = false
   }

@@ -35,6 +35,13 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        // 🌟 修复关键：直接放行跨域的 OPTIONS 预检请求
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+
         String path = request.getRequestURI();
 
         if (path.startsWith("/api/auth/") || path.equals("/error") || path.startsWith("/images/")) {
@@ -76,7 +83,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        userId,          // principal
+                        userId,
                         token,
                         Collections.emptyList()
                 );

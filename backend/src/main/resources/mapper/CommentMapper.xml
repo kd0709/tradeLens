@@ -20,7 +20,6 @@
         create_time
     </sql>
 
-    <!-- 商品评价列表 - 联表查询用户信息 -->
     <select id="selectCommentsByProductId" resultType="com.cjh.backend.dto.Comment.CommentListDto">
         SELECT
             c.id,

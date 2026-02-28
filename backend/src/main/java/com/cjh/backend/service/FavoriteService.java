@@ -14,14 +14,8 @@ import java.util.List;
 */
 public interface FavoriteService extends IService<Favorite> {
 
-    /**
-     * 切换收藏（已收藏则取消，未收藏则添加）
-     */
     boolean toggleFavorite(Long userId, FavoriteToggleDto dto);
 
-    /**
-     * 获取我的收藏列表
-     */
     List<FavoriteListDto> listFavorites(Long userId);
 
 }

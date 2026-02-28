@@ -1,5 +1,3 @@
-import { addToCart } from "@/api/cart"
-
 export interface CartListDto {
   id: number
   productId: number

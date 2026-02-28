@@ -11,6 +11,9 @@ export interface CategoryStatDto {
   value: number
 }
 
+
+
+
 export interface SalesStatisticsDto {
   sellerData: SellerSummaryDto
   avgPrice: number

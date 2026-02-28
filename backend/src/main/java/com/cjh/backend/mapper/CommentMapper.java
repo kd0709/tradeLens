@@ -28,7 +28,6 @@ public interface CommentMapper extends BaseMapper<Comment> {
 
     /**
      * 查询商品的评价列表（联表查询用户信息）
-     * → 对应 XML 中的 select id="selectCommentsByProductId"
      */
     List<CommentListDto> selectCommentsByProductId(@Param("productId") Long productId);
 

@@ -34,16 +34,13 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long addToCart(Long userId, AddToCartDto dto) {
-        // 1. 校验商品是否存在且可购买
         Product product = productMapper.selectById(dto.getProductId());
         if (product == null || product.getProductStatus() != 2) {
             throw new RuntimeException("商品不存在或不可加入购物车");
         }
 
-        // 2. 检查是否已存在购物车项
         Long existCartId = cartMapper.selectCartIdByUserAndProduct(userId, dto.getProductId());
         if (existCartId != null) {
-            // 已存在则更新数量
             Cart existCart = cartMapper.selectById(existCartId);
             existCart.setQuantity(existCart.getQuantity() + dto.getQuantity());
             int rows = cartMapper.updateById(existCart);
@@ -53,7 +50,6 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart>
             return existCartId;
         }
 
-        // 3. 新增购物车项
         Cart cart = new Cart();
         BeanUtils.copyProperties(dto, cart);
         cart.setUserId(userId);
@@ -94,7 +90,6 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart>
             return;
         }
 
-        // 循环删除（毕设简单风格，不用批量删除）
         for (Long cartId : cartIds) {
             int rows = cartMapper.deleteById(cartId);
             if (rows == 0) {

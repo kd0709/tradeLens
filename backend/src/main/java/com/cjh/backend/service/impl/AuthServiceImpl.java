@@ -43,7 +43,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorConstants.USER_FROZEN);
         }
 
-        // 生成 JWT Token
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
         UserInfoDto userInfoDto = new UserInfoDto();

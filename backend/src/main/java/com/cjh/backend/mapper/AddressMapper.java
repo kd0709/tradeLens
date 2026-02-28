@@ -41,10 +41,6 @@ public interface AddressMapper extends BaseMapper<Address> {
     """)
     List<AddressListDto> listByUserId(@Param("userId") Long userId);
 
-
-
-    // com.cjh.backend.mapper.AddressMapper.java
-
     /**
      * 新增一条地址记录
      */

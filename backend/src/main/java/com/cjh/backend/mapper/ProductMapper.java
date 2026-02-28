@@ -40,7 +40,6 @@ public interface ProductMapper extends BaseMapper<Product> {
 
     /**
      * 逻辑删除商品（设置 is_deleted = 1）
-     * 同时删除关联的图片记录（可选，根据业务决定是否保留图片记录）
      */
     int deleteProductByIdAndUserId(
             @Param("id") Long id,

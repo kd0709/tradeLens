@@ -89,7 +89,7 @@
                   </div>
 
                   <div class="col-action center">
-                    <el-popconfirm 
+                    <el-onconfirm 
                       title="确定要移除吗？"
                       confirm-button-text="移除"
                       cancel-button-text="暂不"
@@ -99,7 +99,7 @@
                       <template #reference>
                         <el-button link type="danger" :icon="Delete" circle class="delete-btn" />
                       </template>
-                    </el-popconfirm>
+                    </el-onconfirm>
                   </div>
                 </div>
               </TransitionGroup>
@@ -163,36 +163,27 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 模块化：导入
- */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Picture, Delete } from '@element-plus/icons-vue' // 导入图标
+import { Picture, Delete } from '@element-plus/icons-vue' 
 
-// API & Utils
+// API 
 import { getCartList, updateCartQuantity, deleteCartItems } from '@/api/cart'
 import type { CartListDto } from '@/dto/cart'
 import { getFullImageUrl } from '@/utils/image'
 
-/**
- * 模块化：状态管理
- */
+// 状态
 const router = useRouter()
 const cartList = ref<CartListDto[]>([])
 const selectionSet = ref<number[]>([])
 const loading = ref(false)
 
-/**
- * 模块化：计算属性
- */
-// 解决浮点数精度问题的加法器
+// 加法器
 const totalPrice = computed(() => {
   const sum = selectionSet.value.reduce((acc, id) => {
     const item = cartList.value.find(i => i.id === id)
     if (item) {
-      // 避免精度问题，先乘 100 转整数再计算
       return acc + (Number(item.price) * 100 * item.quantity)
     }
     return acc
@@ -209,9 +200,6 @@ const isIndeterminate = computed(() =>
   selectionSet.value.length > 0 && selectionSet.value.length < cartList.value.length
 )
 
-/**
- * 模块化：业务逻辑
- */
 const formatPrice = (price: number | string) => {
   return Number(price).toFixed(2)
 }
@@ -266,7 +254,6 @@ const handleDelete = async (ids: number[]) => {
     await deleteCartItems(ids)
     ElMessage.success('已移除商品')
     
-    // 本地状态更新，配合 TransitionGroup 产生动画
     cartList.value = cartList.value.filter(item => !ids.includes(item.id))
     selectionSet.value = selectionSet.value.filter(id => !ids.includes(id))
   } catch (e) {
@@ -283,7 +270,6 @@ const handleBatchDelete = async () => {
     )
     handleDelete([...selectionSet.value])
   } catch (e) {
-    // Cancelled
   }
 }
 
@@ -310,7 +296,7 @@ onMounted(() => {
   min-height: calc(100vh - 64px);
   padding: 40px 0 80px;
   position: relative;
-  overflow-x: hidden; // 防止装饰溢出
+  overflow-x: hidden; 
 
   /* 背景装饰 */
   .bg-decoration {

@@ -17,7 +17,7 @@ public class LogInterceptor implements HandlerInterceptor {
                              Object handler) {
         // 请求开始时间
         request.setAttribute(START_TIME, System.currentTimeMillis());
-        return true; // 继续处理
+        return true;
     }
 
     @Override

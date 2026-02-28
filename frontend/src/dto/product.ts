@@ -1,4 +1,3 @@
-// 对应接口文档中的 ProductDetailDto
 export interface ProductDto {
   id: number
   userId: number
@@ -14,9 +13,8 @@ export interface ProductDto {
   viewCount: number
   sellerAvatar?: string 
   sellerNickname?: string
-
   createTime: string
-  isLiked?: boolean // 前端辅助字段：是否已收藏
+  isLiked?: boolean 
 }
 
 // 发布商品 DTO

@@ -35,18 +35,14 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createAddress(Long userId, AddressCreateDto req) {
-        // 1. 如果设置为默认地址，先把该用户其他默认地址取消
+
         if (req.getIsDefault() != null && req.getIsDefault() == 1) {
-            // 简单更新所有默认地址为 0
             addressMapper.cancelDefaultByUserId(userId);
         }
-        // 2. 构建实体
         Address address = new Address();
         BeanUtils.copyProperties(req, address);
         address.setUserId(userId);
-        // 如果前端没传 isDefault，默认 0
         address.setIsDefault(req.getIsDefault() != null ? req.getIsDefault() : 0);
-        // 3. 插入
         int rows = addressMapper.insertAddress(address);
         if (rows == 0) {
             throw new IllegalStateException("新增地址失败");
@@ -60,7 +56,7 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address>
         // 1. 构建更新实体
         Address address = new Address();
         BeanUtils.copyProperties(req, address);
-        address.setUserId(userId);  // 强制设置 userId 用于 WHERE 条件
+        address.setUserId(userId);
 
         // 2. 如果设置为默认地址，先取消其他默认
         if (req.getIsDefault() != null && req.getIsDefault() == 1) {
@@ -79,14 +75,6 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address>
         int rows = addressMapper.deleteByIdAndUserId(addressId, userId);
         return rows > 0;
     }
-
-
-
-
-
-
-
-
 
 }
 
