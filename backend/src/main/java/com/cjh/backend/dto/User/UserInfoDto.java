@@ -11,4 +11,6 @@ public class UserInfoDto {
     private String email;
     private String avatar;
     private String token;
+
+    private Integer role;
 }

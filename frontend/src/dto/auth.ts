@@ -15,5 +15,6 @@ export interface UserInfo {
   phone?: string
   email?: string
   avatar?: string
+  role?: number
   token: string
 }

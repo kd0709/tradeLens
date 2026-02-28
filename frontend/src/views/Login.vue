@@ -174,7 +174,11 @@ async function handleSubmit() {
             password: formData.password
         })
         ElMessage.success('登录成功！')
-        router.push('/')
+        if (authStore.user && authStore.user.role === 1) {
+          router.push('/admin')
+        } else {
+          router.push('/')
+        }
       } else {
         await authStore.register({
           username: formData.username,

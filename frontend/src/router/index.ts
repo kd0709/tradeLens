@@ -111,11 +111,24 @@ const router = createRouter({
   ]
 })
 
-// 简单的全局路由守卫（检查需要登录的页面）
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token') 
+  const userStr = localStorage.getItem('user')
+  
+  // 新增：尝试解析本地存储的用户信息
+  let user = null
+  if (userStr) {
+    try {
+      user = JSON.parse(userStr)
+    } catch (e) {
+      console.error('Failed to parse user from localStorage', e)
+    }
+  }
+
   if (to.meta.requiresAuth && !token) {
     next('/login')
+  } else if (to.meta.requiresAdmin && user?.role !== 1) {
+    next('/')
   } else {
     next()
   }

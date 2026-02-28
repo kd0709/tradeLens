@@ -21,7 +21,7 @@
         <el-table-column prop="id" label="ID" width="70" align="center" />
         <el-table-column label="头像" width="80" align="center">
           <template #default="{ row }">
-            <el-avatar :size="40" :src="row.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
+            <el-avatar :size="40" :src="getFullImageUrl(row.avatar)"/>
           </template>
         </el-table-column>
         <el-table-column prop="username" label="用户名" min-width="120" />
@@ -119,6 +119,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getSystemUserPage, updateSystemUser, deleteSystemUser, addSystemUser } from '@/api/system'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getFullImageUrl } from '@/utils/image'
 
 // --- 列表数据 ---
 const loading = ref(false)

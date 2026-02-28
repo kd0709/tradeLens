@@ -51,6 +51,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
         userInfoDto.setPhone(user.getPhone());
         userInfoDto.setEmail(user.getEmail());
         userInfoDto.setAvatar(user.getAvatar());
+        userInfoDto.setRole(user.getRole());
         userInfoDto.setToken(token);
 
         return userInfoDto;
