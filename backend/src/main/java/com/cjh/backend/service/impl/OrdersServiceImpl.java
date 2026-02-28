@@ -1,8 +1,14 @@
 package com.cjh.backend.service.impl;
 
+
+import com.alibaba.fastjson.JSONObject;
+import com.alipay.api.AlipayApiException;
+import com.alipay.api.AlipayClient;
+import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cjh.backend.config.AlipayConfig;
 import com.cjh.backend.dto.Orders.CreateOrderDto;
 import com.cjh.backend.dto.Orders.OrderDetailDto;
 import com.cjh.backend.dto.Orders.OrderItemDto;
@@ -43,6 +49,8 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
     private final OrderItemMapper orderItemMapper;
     private final ProductMapper productMapper;
     private final AddressMapper addressMapper;
+    private final AlipayClient alipayClient;
+    private final AlipayConfig alipayConfig;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -194,7 +202,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void payOrder(Long userId, String orderNo, String payType) {
+    public String payOrder(Long userId, String orderNo, String payType) {
         Orders order = ordersMapper.selectByOrderNo(orderNo);
         if (order == null || !order.getBuyerId().equals(userId)) {
             throw new RuntimeException("订单不存在或无权限");
@@ -202,13 +210,28 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         if (order.getStatus() != 1) {
             throw new RuntimeException("订单状态不允许支付");
         }
+        // 调用支付宝网页支付接口
+        AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
+        request.setNotifyUrl(alipayConfig.getNotifyUrl());
+        request.setReturnUrl(alipayConfig.getReturnUrl());
 
+        JSONObject bizContent = new JSONObject();
+        bizContent.put("out_trade_no", order.getOrderNo());
+        bizContent.put("total_amount", order.getTotalPrice());
+        bizContent.put("subject", "TradeLens订单支付:" + order.getOrderNo());
+        bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
+        request.setBizContent(bizContent.toString());
         // 更新订单状态为待发货
-        order.setStatus(2);
-        order.setPayTime(LocalDateTime.now());
-        int rows = ordersMapper.updateById(order);
-        if (rows == 0) {
-            throw new IllegalStateException("支付失败");
+//        order.setStatus(2);
+//        order.setPayTime(LocalDateTime.now());
+//        int rows = ordersMapper.updateById(order);
+
+
+        try {
+            // 返回自动提交的HTML表单字符串
+            return alipayClient.pageExecute(request).getBody();
+        } catch (AlipayApiException e) {
+            throw new RuntimeException("支付宝跳转失败：" + e.getMessage());
         }
     }
 

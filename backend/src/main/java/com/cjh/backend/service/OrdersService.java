@@ -29,5 +29,5 @@ public interface OrdersService extends IService<Orders> {
 
     void deliverOrder(Long sellerId, String orderNo, String trackingNo);
 
-    void payOrder(Long userId, String orderNo, String payType);
+    String payOrder(Long userId, String orderNo, String payType);
 }

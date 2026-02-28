@@ -110,6 +110,7 @@ const handleConfirmPay = async () => {
       orderNo: order.value.orderNo, 
       payType: payType.value 
     })
+    
     ElMessage.success('支付成功！')
     router.replace('/user') 
   } catch (e) {

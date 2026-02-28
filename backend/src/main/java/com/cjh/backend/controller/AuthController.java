@@ -51,7 +51,7 @@ public class AuthController {
             return Result.success(userInfoDto,"登陆成功");
         } catch (Exception e) {
             log.error("用户登陆失败", e);
-            return Result.fail("注册失败");
+            return Result.fail("登陆失败");
         }
     }
 

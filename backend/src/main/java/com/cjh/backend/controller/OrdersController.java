@@ -115,8 +115,8 @@ public class OrdersController {
             @Valid @RequestBody OrderPayDto dto) {
         log.info("用户 {} 支付订单，订单号: {}, 支付方式: {}", userId, dto.getOrderNo(), dto.getPayType());
         try {
-            orderService.payOrder(userId, dto.getOrderNo(), dto.getPayType());
-            return Result.success("支付成功");
+            String alipayForm=orderService.payOrder(userId, dto.getOrderNo(), dto.getPayType());
+            return Result.success(alipayForm);
         } catch (Exception e) {
             log.error("用户 {} 支付订单失败，订单号: {}", userId, dto.getOrderNo(), e);
             return Result.fail("支付失败：" + e.getMessage());
