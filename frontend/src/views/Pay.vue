@@ -32,42 +32,29 @@
         </div>
 
         <div class="payment-method">
-          <div class="method-title">选择支付方式</div>
+          <div class="method-title">支付方式</div>
           <div class="methods">
-            <div 
-              class="method-item" 
-              :class="{ active: payType === 'wechat' }"
-              @click="payType = 'wechat'"
-            >
-              <img src="https://img.icons8.com/color/48/weixing.png" alt="微信支付"/>
-              <span>微信支付</span>
-              <el-icon class="check" v-if="payType === 'wechat'"><Select /></el-icon>
-            </div>
-            <div 
-              class="method-item" 
-              :class="{ active: payType === 'alipay' }"
-              @click="payType = 'alipay'"
-            >
+            <div class="method-item active">
               <img src="https://img.icons8.com/color/48/alipay.png" alt="支付宝"/>
               <span>支付宝</span>
-              <el-icon class="check" v-if="payType === 'alipay'"><Select /></el-icon>
+              <el-icon class="check"><Select /></el-icon>
             </div>
           </div>
         </div>
 
         <div class="qr-section">
           <div class="qr-box">
-             <div class="qr-placeholder" :class="payType">
+             <div class="qr-placeholder" alipay>
                <el-icon :size="40" color="#fff"><Money /></el-icon>
              </div>
-             <p>打开{{ payType === 'wechat' ? '微信' : '支付宝' }}扫一扫</p>
+             <p>打开支付宝扫一扫</p>
           </div>
         </div>
 
         <div class="actions">
            <el-button @click="router.push('/user')">稍后支付</el-button>
            <el-button type="primary" :loading="paying" @click="handleConfirmPay">
-             模拟支付成功
+             去支付
            </el-button>
         </div>
       </div>
@@ -85,7 +72,6 @@ import type { OrderDto } from '@/dto/order'
 
 const route = useRoute()
 const router = useRouter()
-const payType = ref<'wechat' | 'alipay'>('wechat')
 const order = ref<OrderDto | null>(null)
 const paying = ref(false)
 
@@ -106,19 +92,32 @@ const handleConfirmPay = async () => {
   paying.value = true
   
   try {
-    await payOrder({ 
-      orderNo: order.value.orderNo, 
-      payType: payType.value 
+   const payHtml = await payOrder({
+      orderNo: order.value.orderNo,
+      payType: 'alipay'
     })
     
-    ElMessage.success('支付成功！')
-    router.replace('/user') 
-  } catch (e) {
+   if (!payHtml) {
+      throw new Error('未获取到支付宝支付表单')
+    }
+
+    const payWindow = window.open('', '_self')
+    if (!payWindow) {
+      throw new Error('浏览器拦截了支付跳转，请允许弹窗后重试')
+    }
+
+    payWindow.document.write(payHtml)
+    payWindow.document.close()
+  } catch (e: any) {
     console.error(e)
+    ElMessage.error(e?.message || '拉起支付宝失败，请稍后重试')
   } finally {
     paying.value = false
   }
 }
+
+
+
 
 onMounted(() => {
   loadOrder()
@@ -246,8 +245,7 @@ onMounted(() => {
       align-items: center;
       justify-content: center;
       border-radius: 8px;
-      
-      &.wechat { background: #22c55e; }
+    
       &.alipay { background: #3b82f6; }
     }
     

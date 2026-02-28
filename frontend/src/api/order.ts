@@ -38,7 +38,7 @@ export function getOrderDetail(orderNo: string): Promise<OrderDto> {
 
 
 // 支付订单
-export function payOrder(data: OrderPayDto): Promise<void> {
+export function payOrder(data: OrderPayDto): Promise<string> {
   return request.post('/api/order/pay', data)
 }
 
