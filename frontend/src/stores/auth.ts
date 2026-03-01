@@ -6,33 +6,25 @@ import * as authApi from '../api/auth'
 export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<UserInfo | null>(null)
-  const token = ref<string>(localStorage.getItem('token') || '') 
+  const token = ref<string>(localStorage.getItem('token') || '')
   const isLoggedIn = computed(() => !!token.value)
-
 
   async function login(loginData: LoginRequest) {
     const result = await authApi.login(loginData)
-
-    console.log('登录接口返回结果:', result)
     token.value = result.token
-    user.value = result 
-
-    console.log('登录成功，用户信息:', result.token)
-
+    user.value = result
     localStorage.setItem('token', result.token)
     localStorage.setItem('user', JSON.stringify(result))
   }
-
 
   async function register(registerData: RegisterRequest) {
     await authApi.register(registerData)
   }
 
-
   async function logout() {
     try {
       await authApi.logout()
-    } catch (err) {
+    } catch {
     } finally {
       token.value = ''
       user.value = null
@@ -40,7 +32,6 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('user')
     }
   }
-
 
   function initAuth() {
     const savedUser = localStorage.getItem('user')

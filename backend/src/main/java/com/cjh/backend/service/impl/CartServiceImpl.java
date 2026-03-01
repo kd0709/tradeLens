@@ -17,16 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
-* @author 45209
-* @description 针对表【cart(购物车表)】的数据库操作Service实现
-* @createDate 2026-01-29 18:58:49
-*/
 @Service
 @RequiredArgsConstructor
 public class CartServiceImpl extends ServiceImpl<CartMapper, Cart>
     implements CartService{
-
 
     private final CartMapper cartMapper;
     private final ProductMapper productMapper;
@@ -91,15 +85,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart>
         }
 
         for (Long cartId : cartIds) {
-            int rows = cartMapper.deleteById(cartId);
-            if (rows == 0) {
-//                log.warn("删除购物车项失败，ID: {}", cartId);
-            }
+            cartMapper.deleteById(cartId);
         }
     }
-
 }
-
-
-
-

@@ -120,18 +120,14 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
 
-// API 接口
 import { getProductList } from '@/api/product'
 import { getCategoryList } from '@/api/category'
-
-// DTO 导入
 import { getFullImageUrl } from '@/utils/image' 
 import type { ProductQuery } from '@/dto/product'
 
 const router = useRouter()
 const route = useRoute()
 
-// 状态定义
 const loading = ref(false)
 const productList = ref<any[]>([]) 
 const total = ref(0) // 新增：总条数
@@ -166,7 +162,6 @@ const banners = ref<any[]>([
   }
 ])
 
-// 查询参数
 const queryParams = reactive<ProductQuery>({
   current: 1,
   size: 12,

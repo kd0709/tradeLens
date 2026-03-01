@@ -89,7 +89,7 @@
                   </div>
 
                   <div class="col-action center">
-                    <el-onconfirm 
+                    <el-popconfirm 
                       title="确定要移除吗？"
                       confirm-button-text="移除"
                       cancel-button-text="暂不"
@@ -99,7 +99,7 @@
                       <template #reference>
                         <el-button link type="danger" :icon="Delete" circle class="delete-btn" />
                       </template>
-                    </el-onconfirm>
+                    </el-popconfirm>
                   </div>
                 </div>
               </TransitionGroup>
@@ -168,18 +168,15 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture, Delete } from '@element-plus/icons-vue' 
 
-// API 
 import { getCartList, updateCartQuantity, deleteCartItems } from '@/api/cart'
 import type { CartListDto } from '@/dto/cart'
 import { getFullImageUrl } from '@/utils/image'
 
-// 状态
 const router = useRouter()
 const cartList = ref<CartListDto[]>([])
 const selectionSet = ref<number[]>([])
 const loading = ref(false)
 
-// 加法器
 const totalPrice = computed(() => {
   const sum = selectionSet.value.reduce((acc, id) => {
     const item = cartList.value.find(i => i.id === id)
@@ -225,7 +222,6 @@ const handleCheckAllChange = (checked: boolean) => {
   selectionSet.value = checked ? cartList.value.map(item => item.id) : []
 }
 
-// 防抖更新数量
 const debounceTimers = new Map<number, number>()
 const onQuantityChange = (item: CartListDto, val: number) => {
   if (!item) return

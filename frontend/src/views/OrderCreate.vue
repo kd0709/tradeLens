@@ -161,26 +161,21 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElForm } from 'element-plus'
 import { Plus, Select, LocationInformation } from '@element-plus/icons-vue'
 
-// API 接口
 import { getProductDetail } from '@/api/product'
 import { getMyAddressList, createAddress } from '@/api/address'
 import { createOrder } from '@/api/order'
 import { getCartList } from '@/api/cart'
 import { getFullImageUrl } from '@/utils/image'
-
-// DTO 导入
 import type { AddressCreateDto, AddressDto } from '@/dto/address'
 import type { CreateOrderDto } from '@/dto/order' 
 
 const route = useRoute()
 const router = useRouter()
 
-// 状态定义
 const loading = ref(false)
 const submitting = ref(false)
 const addressDialogVisible = ref(false)
 
-// 列表数据
 const addressFormRef = ref<InstanceType<typeof ElForm> | null>(null)
 const addressList = ref<AddressDto[]>([])
 const selectedAddressId = ref<number | undefined>(undefined)

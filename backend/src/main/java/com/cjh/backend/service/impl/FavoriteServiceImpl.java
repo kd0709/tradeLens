@@ -14,16 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
-* @author 45209
-* @description 针对表【favorite(商品收藏表)】的数据库操作Service实现
-* @createDate 2026-01-29 18:58:49
-*/
 @Service
 @RequiredArgsConstructor
 public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite>
     implements FavoriteService{
-
 
     private final FavoriteMapper favoriteMapper;
     private final ProductMapper productMapper;
@@ -34,14 +28,13 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite>
         Long existId = favoriteMapper.selectIdByUserAndProduct(userId, dto.getProductId());
 
         if (existId != null) {
-            // 已收藏 → 取消
             int rows = favoriteMapper.deleteById(existId);
             if (rows == 0) {
                 throw new IllegalStateException("取消收藏失败");
             }
-            return false; // false 表示已取消
+            return false;
         }
-        // 未收藏 → 添加
+
         Favorite favorite = new Favorite();
         favorite.setUserId(userId);
         favorite.setProductId(dto.getProductId());
@@ -51,7 +44,7 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite>
         if (rows == 0) {
             throw new IllegalStateException("添加收藏失败");
         }
-        return true; // true 表示已收藏
+        return true;
     }
 
     @Override
@@ -59,7 +52,3 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite>
         return favoriteMapper.selectFavoriteListByUserId(userId);
     }
 }
-
-
-
-

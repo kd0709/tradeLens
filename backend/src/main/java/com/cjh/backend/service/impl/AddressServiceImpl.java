@@ -14,18 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
-* @author 45209
-* @description 针对表【address(收货地址表)】的数据库操作Service实现
-* @createDate 2026-01-29 18:58:49
-*/
 @Service
 @RequiredArgsConstructor
 public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address>
     implements AddressService{
 
     private final AddressMapper addressMapper;
-
 
     @Override
     public List<AddressListDto> listMyAddresses(Long userId) {
@@ -35,7 +29,6 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createAddress(Long userId, AddressCreateDto req) {
-
         if (req.getIsDefault() != null && req.getIsDefault() == 1) {
             addressMapper.cancelDefaultByUserId(userId);
         }
@@ -53,31 +46,21 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateAddress(Long userId, AddressUpdateDto req) {
-        // 1. 构建更新实体
         Address address = new Address();
         BeanUtils.copyProperties(req, address);
         address.setUserId(userId);
 
-        // 2. 如果设置为默认地址，先取消其他默认
         if (req.getIsDefault() != null && req.getIsDefault() == 1) {
             addressMapper.cancelDefaultByUserId(userId);
         }
 
-        // 3. 执行动态更新
         int rows = addressMapper.updateAddressSelective(address);
         return rows > 0;
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteAddress(Long userId, Long addressId) {
-        int rows = addressMapper.deleteByIdAndUserId(addressId, userId);
-        return rows > 0;
+        return addressMapper.deleteByIdAndUserId(addressId, userId) > 0;
     }
-
 }
-
-
-
-

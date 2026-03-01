@@ -148,11 +148,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElLoading } from 'element-plus'
 import type { FormInstance, UploadRequestOptions, UploadUserFile } from 'element-plus'
 import { uploadFile } from '@/api/common'
 import { publishProduct } from '@/api/product'
 import { getCategoryList } from '@/api/category'
+import { aiAutoFill } from '@/api/common'
 
 import type { ProductPublishDto } from '@/dto/product'
 
@@ -218,6 +219,7 @@ const handleRemove = (uploadFile: UploadUserFile) => {
 
 const handleUpload = async (options: UploadRequestOptions) => {
   try {
+    // 1. 上传图片并获取 URL
     const result = await uploadFile(options.file)
     
     let url: string = ''
@@ -232,13 +234,57 @@ const handleUpload = async (options: UploadRequestOptions) => {
     uploadedImages.value.push(url)
     options.onSuccess({ url })
     formRef.value?.validateField('images') 
+
+
+    // 2. 如果是上传的第一张主图，触发 AI 智能填表
+    if (uploadedImages.value.length === 1) {
+      const loadingInstance = ElLoading.service({
+        lock: true,
+        text: 'AI 正在为您生成商品信息...',
+        background: 'rgba(255, 255, 255, 0.7)',
+      })
+
+      try {
+        // 请求后端 AI 接口，声明为 any 以解决 ts 类型推断问题
+        const res: any = await aiAutoFill(url)
+        
+        // 兼容不同的 Axios 拦截器格式提取真正的 json 数据
+        const aiData = res.data?.data || res.data || res
+        
+        // 自动填充表单
+        if (aiData.title) form.title = aiData.title
+        if (aiData.description) form.description = aiData.description
+        if (aiData.price) form.price = aiData.price
+        if (aiData.conditionLevel) form.conditionLevel = aiData.conditionLevel
+        
+        // 分类名称转分类ID
+        if (categories.value.length === 0) {
+          await loadCategories()
+        }
+        
+        if (aiData.categoryName) {
+           const matchedCategory = categories.value.find(c => 
+             c.name.includes(aiData.categoryName) || aiData.categoryName.includes(c.name)
+           )
+           if (matchedCategory) {
+             form.categoryId = matchedCategory.id
+           }
+        }
+
+        ElMessage.success('✨ AI 已自动填写商品信息，请确认后发布！')
+      } catch (aiErr) {
+        console.error('AI 识别失败，降级为手动填写', aiErr)
+        ElMessage.warning('未能完全识别商品，请手动补充信息')
+      } finally {
+        loadingInstance.close()
+      }
+    }
   } catch (error) {
     console.error('❌ 上传失败:', error)
     options.onError(error as any)
     ElMessage.error('图片上传失败，请重试')
   }
 }
-
 const loadCategories = async () => {
   if (categories.value.length > 0) return
   try {

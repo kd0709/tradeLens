@@ -15,12 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
-
-/**
-* @author 45209
-* @description 针对表【product(商品表)】的数据库操作Service实现
-* @createDate 2026-01-29 18:58:49
-*/
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
@@ -31,25 +25,22 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long publishProduct(Long userId, ProductPublishDto req) {
-        // 1. 构建商品实体
         Product product = new Product();
         BeanUtils.copyProperties(req, product);
         product.setUserId(userId);
 
-        // 2. 插入商品
         int rows = productMapper.insertProduct(product);
         if (rows == 0) {
             throw new IllegalStateException("发布失败");
         }
         Long productId = product.getId();
 
-        // 3. 插入图片（如果有）
         if (req.getImages() != null && !req.getImages().isEmpty()) {
             for (int i = 0; i < req.getImages().size(); i++) {
                 ProductImage image = new ProductImage();
                 image.setProductId(productId);
                 image.setImageUrl(req.getImages().get(i));
-                image.setIsMain(i == 0 ? 1 : 0);  // 第一张设为主图
+                image.setIsMain(i == 0 ? 1 : 0);
                 image.setSort(i);
                 productMapper.insertProductImage(image);
             }
@@ -71,12 +62,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteProduct(Long userId, Long productId) {
-        int rows = productMapper.deleteProductByIdAndUserId(productId, userId);
-
-        // 可选：清理图片记录
-        // productMapper.deleteProductImages(productId);
-
-        return rows > 0;
+        return productMapper.deleteProductByIdAndUserId(productId, userId) > 0;
     }
 
     @Override
@@ -125,15 +111,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
         if (detail == null) {
             return null;
         }
-        // 在 getProductDetail 方法中补充
+
         List<String> imageUrls = productMapper.getProductImageUrls(productId);
         detail.setImages(imageUrls);
 
-        // 是否收藏（未登录返回 false）
-        boolean isFavorited = false;
-        if (currentUserId != null) {
-            isFavorited = productMapper.isFavorited(currentUserId, productId);
-        }
+        boolean isFavorited = currentUserId != null && productMapper.isFavorited(currentUserId, productId);
         detail.setIsFavorited(isFavorited);
 
         return detail;
@@ -147,22 +129,18 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateProduct(Long userId, ProductUpdateDto req) {
-        // 1. 校验商品是否存在且属于当前用户
         Product existingProduct = productMapper.selectById(req.getId());
         if (existingProduct == null || !existingProduct.getUserId().equals(userId)) {
             return false;
         }
 
-        // 2. 校验商品状态（只有待审核或上架状态可编辑）
         if (existingProduct.getProductStatus() != 1 && existingProduct.getProductStatus() != 2) {
             throw new IllegalArgumentException("商品状态不允许编辑");
         }
 
-        // 3. 更新商品基本信息
         Product product = new Product();
         BeanUtils.copyProperties(req, product);
         product.setId(req.getId());
-        // 不更新userId和状态
         product.setUserId(null);
         product.setProductStatus(null);
         product.setViewCount(null);
@@ -173,11 +151,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
             return false;
         }
 
-        // 4. 更新图片（先删除旧图片，再插入新图片）
         if (req.getImages() != null) {
-            // 删除旧图片
             productMapper.deleteProductImages(req.getId());
-            // 插入新图片
             for (int i = 0; i < req.getImages().size(); i++) {
                 ProductImage image = new ProductImage();
                 image.setProductId(req.getId());
@@ -191,7 +166,3 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
         return true;
     }
 }
-
-
-
-

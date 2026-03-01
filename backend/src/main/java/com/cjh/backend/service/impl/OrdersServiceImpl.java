@@ -1,7 +1,6 @@
 package com.cjh.backend.service.impl;
 
-
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.request.AlipayTradePagePayRequest;
@@ -24,17 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
-/**
-* @author 45209
-* @description 针对表【orders(订单表)】的数据库操作Service实现
-* @createDate 2026-01-29 18:58:49
-*/
 @Service
 @RequiredArgsConstructor
 public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
@@ -51,23 +43,20 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderDetailDto createOrder(Long userId, CreateOrderDto dto) {
-        // 1. 校验地址
         Address address = addressMapper.selectById(dto.getAddressId());
         if (address == null || !address.getUserId().equals(userId)) {
             throw new RuntimeException("收货地址异常");
         }
 
-        // 2. 构建订单主表
         Orders order = new Orders();
         order.setOrderNo(UUID.randomUUID().toString().replace("-", "").toUpperCase().substring(0, 20));
         order.setBuyerId(userId);
-        order.setStatus(1); // 待支付
+        order.setStatus(1);
         order.setReceiverName(address.getReceiverName());
         order.setReceiverPhone(address.getReceiverPhone());
         order.setReceiverAddress(address.getProvince() + address.getCity() + address.getDistrict() + address.getDetailAddress());
         order.setCreateTime(LocalDateTime.now());
 
-        // 3. 循环处理商品、计算总价、准备明细
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
 
@@ -77,11 +66,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
                 throw new RuntimeException("商品 " + (product != null ? product.getTitle() : "") + " 已失效");
             }
 
-            // 累加金额
             BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(itemTotal);
 
-            // 创建明细对象
             OrderItem item = new OrderItem();
             item.setProductId(product.getId());
             item.setProductTitle(product.getTitle());
@@ -90,22 +77,18 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             item.setCreateTime(LocalDateTime.now());
             orderItems.add(item);
 
-            // 如果是多商家系统，这里还需要设置 order.setSellerId，通常取第一个商品的卖家或按卖家拆单
             if (order.getSellerId() == null) order.setSellerId(product.getUserId());
         }
 
         order.setTotalPrice(totalAmount);
-        ordersMapper.insert(order); // 插入主表
+        ordersMapper.insert(order);
 
-        // 4. 批量插入明细
         for (OrderItem item : orderItems) {
             item.setOrderId(order.getId());
             orderItemMapper.insert(item);
         }
 
-        // 5. 【关键】清理购物车
         if (dto.getCartIds() != null && !dto.getCartIds().isEmpty()) {
-            // 注意：这里要校验购物车是否属于该用户，防止越权删除
             QueryWrapper<Cart> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("user_id", userId).in("id", dto.getCartIds());
             cartMapper.delete(queryWrapper);
@@ -135,7 +118,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         OrderDetailDto dto = toDetailDto(order);
 
-        // 手动查询并设置明细
         List<OrderItem> items = orderItemMapper.selectByOrderId(order.getId());
         List<OrderItemDto> itemDtos = new ArrayList<>();
         for (OrderItem item : items) {
@@ -192,7 +174,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         if (order == null || !order.getSellerId().equals(sellerId)) {
             throw new RuntimeException("订单不存在或无权限");
         }
-            if (order.getStatus() != 2) {
+        if (order.getStatus() != 2) {
             throw new RuntimeException("订单状态不允许发货");
         }
 
@@ -215,7 +197,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         if (order.getStatus() != 1) {
             throw new RuntimeException("订单状态不允许支付");
         }
-        // 调用支付宝网页支付接口
+
         AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
         request.setNotifyUrl(alipayConfig.getNotifyUrl());
         request.setReturnUrl(alipayConfig.getReturnUrl());
@@ -226,21 +208,18 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         bizContent.put("subject", "TradeLens订单支付:" + order.getOrderNo());
         bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
         request.setBizContent(bizContent.toString());
-        // 更新订单状态为待发货
-//        order.setStatus(2);
-//        order.setPayTime(LocalDateTime.now());
-//        int rows = ordersMapper.updateById(order);
 
+        order.setStatus(2);
+        order.setPayTime(LocalDateTime.now());
+        ordersMapper.updateById(order);
 
         try {
-            // 返回自动提交的HTML表单字符串
             return alipayClient.pageExecute(request).getBody();
         } catch (AlipayApiException e) {
             throw new RuntimeException("支付宝跳转失败：" + e.getMessage());
         }
     }
 
-    // BeanUtils 转换方法（特殊字段已由 MyBatis-Plus 自动填充或手动设置）
     private OrderListDto toListDto(Orders order) {
         OrderListDto dto = new OrderListDto();
         BeanUtils.copyProperties(order, dto);
@@ -252,16 +231,4 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         BeanUtils.copyProperties(order, dto);
         return dto;
     }
-
-    public static String generate() {
-        String time = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-                .format(LocalDateTime.now());
-        int random = ThreadLocalRandom.current().nextInt(1000, 10000);
-        return "EXP" + time + random;
-    }
-
 }
-
-
-
-

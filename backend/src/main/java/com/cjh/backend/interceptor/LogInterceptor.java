@@ -8,14 +8,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Component
 public class LogInterceptor implements HandlerInterceptor {
 
-    // 存放请求开始时间
     private static final String START_TIME = "startTime";
 
     @Override
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
-        // 请求开始时间
         request.setAttribute(START_TIME, System.currentTimeMillis());
         return true;
     }

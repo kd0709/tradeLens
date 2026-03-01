@@ -114,7 +114,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { View, Star, ShoppingCart } from '@element-plus/icons-vue'
 
-// API DTO
 import { getProductDetail } from '@/api/product'
 import { addToCart } from '@/api/cart'
 import { toggleFavorite } from '@/api/favorite'
@@ -122,7 +121,6 @@ import type { ProductDto } from '@/dto/product'
 import { getFullImageUrl } from '@/utils/image'
 import type { FavoriteToggleDto } from '@/dto/favorite'
 
-// 状态管理
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)

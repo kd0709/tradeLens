@@ -18,11 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
-* @author 45209
-* @description 针对表【comment(商品评价表)】的数据库操作Service实现
-* @createDate 2026-01-29 18:58:49
-*/
 @Service
 @RequiredArgsConstructor
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
@@ -35,7 +30,6 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void publishComment(Long userId, CommentPublishDto dto) {
-        // 1. 校验订单
         Orders order = ordersMapper.selectById(dto.getOrderId());
         if (order == null || !order.getBuyerId().equals(userId)) {
             throw new RuntimeException("订单不存在或无权限评价");
@@ -44,20 +38,17 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
             throw new RuntimeException("订单未完成，无法评价");
         }
 
-        // 2. 检查已评价
         Long existId = commentMapper.selectIdByOrderId(dto.getOrderId());
         if (existId != null) {
             throw new RuntimeException("该订单已评价，请勿重复提交");
         }
 
-        // 3. 查询订单明细获取 product_id（假设单明细）
         List<OrderItem> items = orderItemMapper.selectByOrderId(dto.getOrderId());
         if (items.isEmpty()) {
             throw new RuntimeException("订单明细不存在");
         }
-        Long productId = items.get(0).getProductId();  // 取第一个明细的 product_id
+        Long productId = items.get(0).getProductId();
 
-        // 4. 构建评价实体
         Comment comment = new Comment();
         BeanUtils.copyProperties(dto, comment);
         comment.setUserId(userId);
@@ -74,9 +65,4 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     public List<CommentListDto> listCommentsByProductId(Long productId) {
         return commentMapper.selectCommentsByProductId(productId);
     }
-
 }
-
-
-
-

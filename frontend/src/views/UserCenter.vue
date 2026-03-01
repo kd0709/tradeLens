@@ -479,7 +479,6 @@ const initCharts = () => {
 const fetchStatistics = async () => {
   try {
     const res = await getSalesStatistics()
-    console.log('统计数据', res)
     if (res) {
       cachedStats.value = res
       statsData.totalAmount = res.sellerData.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2 })

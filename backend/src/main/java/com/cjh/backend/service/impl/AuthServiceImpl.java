@@ -16,11 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
-/**
-* @author 45209
-* @description 针对表【user(用户表)】的数据库操作Service实现
-* @createDate 2026-01-04 17:15:32
-*/
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
@@ -29,7 +24,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
-
 
     @Override
     public UserInfoDto login(LoginRequest loginRequest) {
@@ -55,8 +49,6 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
         userInfoDto.setToken(token);
 
         return userInfoDto;
-
-
     }
 
     @Override
@@ -68,13 +60,9 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUsername(registerRequest.getUsername());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        String randomStr = UUID.randomUUID().toString().substring(0, 8); // 取前8位
+        String randomStr = UUID.randomUUID().toString().substring(0, 8);
         user.setNickname("邪恶水蜜桃_" + randomStr);
 
         userMapper.insert(user);
     }
 }
-
-
-
-
