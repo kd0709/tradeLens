@@ -31,15 +31,26 @@ public class OrdersController {
     public Result<OrderDetailDto> createOrder(
             @CurrentUser Long userId,
             @Valid @RequestBody CreateOrderDto dto) {
-        log.info("用户 {} 创建订单，商品ID: {}, 数量: {}, 地址ID: {}",
-                userId, dto.getProductId(), dto.getQuantity(), dto.getAddressId());
+
+        // 💡 修正日志打印：DTO 现在包含的是 items 列表而非单个 ID
+        log.info("用户 {} 发起下单请求，包含商品种类数: {}, 地址ID: {}, 来源购物车数: {}",
+                userId,
+                dto.getItems() != null ? dto.getItems().size() : 0,
+                dto.getAddressId(),
+                dto.getCartIds() != null ? dto.getCartIds().size() : 0);
+
         try {
             OrderDetailDto result = orderService.createOrder(userId, dto);
             log.info("用户 {} 创建订单成功，订单号: {}", userId, result.getOrderNo());
             return Result.success(result);
+        } catch (RuntimeException e) {
+            // 业务异常（如：商品不存在、库存不足）
+            log.warn("用户 {} 下单业务校验未通过: {}", userId, e.getMessage());
+            return Result.fail(e.getMessage());
         } catch (Exception e) {
-            log.error("用户 {} 创建订单失败", userId, e);
-            return Result.fail("创建订单失败：" + e.getMessage());
+            // 系统级异常
+            log.error("用户 {} 创建订单发生系统异常", userId, e);
+            return Result.fail("系统繁忙，请稍后再试");
         }
     }
 

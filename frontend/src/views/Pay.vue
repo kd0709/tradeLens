@@ -116,9 +116,6 @@ const handleConfirmPay = async () => {
   }
 }
 
-
-
-
 onMounted(() => {
   loadOrder()
 })

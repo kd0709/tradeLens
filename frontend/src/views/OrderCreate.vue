@@ -331,35 +331,50 @@ const handleSaveAddress = async () => {
 }
 
 const handleSubmit = async () => {
+  // 1. 基础校验
   if (!selectedAddressId.value) {
     return ElMessage.warning('请选择收货地址')
   }
   if (!orderItems.value.length) return
 
   submitting.value = true
+  
   try {
-    const promises = orderItems.value.map(item => {
-      const dto: CreateOrderDto = {
+    // 2. 构造符合后端新 DTO 格式的数据
+    // 从路由 query 中获取需要清理的购物车 ID
+    const cartIdList = route.query.cartIds 
+      ? String(route.query.cartIds).split(',').map(id => Number(id)) 
+      : []
+
+    const dto = {
+      addressId: selectedAddressId.value,
+      // 组装商品列表
+      items: orderItems.value.map(item => ({
         productId: item.productId,
-        quantity: item.quantity || 1,
-        addressId: selectedAddressId.value!
-      }
-      return createOrder(dto)
-    })
+        quantity: item.quantity || 1
+      })),
+      // 传入购物车 ID，让后端顺便把它们删了
+      cartIds: cartIdList
+    }
 
-    const results = await Promise.all(promises)
+    // 3. 发起【一次性】批量下单请求
+    // 注意：这里的 createOrder 接口现在接收的是包含列表的对象，不再是循环调用
+    const result = await createOrder(dto)
 
-    const successCount = results.filter(r => r?.orderNo).length
-
-    ElMessage.success(`成功创建 ${successCount} 个订单`)
-
-    if (successCount === 1 && results[0]?.orderNo) {
-      router.replace(`/pay/${results[0].orderNo}`)
+    // 4. 下单成功处理
+    if (result && result.orderNo) {
+      ElMessage.success('订单创建成功')
+      // 跳转到支付页，传递这个包含多个商品的统一订单号
+      router.replace(`/pay/${result.orderNo}`)
     } else {
+      // 如果后端返回结构不同，跳转到订单列表页
       router.replace('/user/orders')
     }
-  } catch (err) {
+    
+  } catch (err: any) {
     console.error('创建订单失败', err)
+    // 具体的错误提示（如：商品库存不足、商品不可购买等）
+    ElMessage.error(err.response?.data?.message || '创建订单失败，请稍后重试')
   } finally {
     submitting.value = false
   }

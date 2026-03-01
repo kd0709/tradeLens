@@ -7,10 +7,15 @@ export enum OrderStatus {
   CANCELLED = 5 // 已取消
 }
 
+export interface OrderItemRequest {
+  productId: number;
+  quantity: number;
+}
+
 export interface CreateOrderDto {
-  productId: number
-  quantity: number
-  addressId: number
+  addressId: number;
+  items: OrderItemRequest[];
+  cartIds?: number[];        
 }
 
 export interface OrderPayDto {
