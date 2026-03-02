@@ -244,7 +244,7 @@ const loadAddresses = async () => {
       selectedAddressId.value = defaultAddr?.id ?? addressList.value[0]?.id
     }
   } catch (err) {
-    console.error('获取地址列表失败', err)
+    // 获取地址列表失败已由 ElMessage处理
   }
 }
 
@@ -302,7 +302,7 @@ const initData = async () => {
       return
     }
   } catch (err: any) {
-    console.error('初始化订单数据失败', err)
+    //订单初始化失败已由 ElMessage处理
     ElMessage.error('加载订单信息失败')
     setTimeout(() => router.back(), 1200)
   } finally {
@@ -382,7 +382,7 @@ const handleSubmit = async () => {
     }
     
   } catch (err: any) {
-    console.error('创建订单失败', err)
+    //订单创建失败已由 ElMessage处理
     // 具体的错误提示（如：商品库存不足、商品不可购买等）
     ElMessage.error(err.response?.data?.message || '创建订单失败，请稍后重试')
   } finally {

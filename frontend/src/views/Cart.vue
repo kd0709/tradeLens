@@ -155,8 +155,10 @@
               class="checkout-btn"
               :disabled="selectionSet.length === 0"
               @click="handleCheckout"
+              :loading="checkoutLoading"
             >
-              去结算
+              <span v-if="!checkoutLoading">去结算</span>
+              <span v-else>处理中...</span>
             </el-button>
           </div>
         </div>
@@ -170,6 +172,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture, Delete } from '@element-plus/icons-vue' 
+import { showSuccess, showError, showWarning, showInfo } from '@/utils/message' 
 
 import { getCartList, updateCartQuantity, deleteCartItems } from '@/api/cart'
 import type { CartListDto } from '@/dto/cart'
@@ -179,6 +182,7 @@ const router = useRouter()
 const cartList = ref<CartListDto[]>([])
 const selectionSet = ref<number[]>([])
 const loading = ref(false)
+const checkoutLoading = ref(false)
 
 const totalPrice = computed(() => {
   const sum = selectionSet.value.reduce((acc, id) => {
@@ -214,7 +218,7 @@ const loadData = async () => {
     const res = await getCartList()
     cartList.value = res || []
   } catch (e) {
-    console.error(e)
+    //车操作异常已由 ElMessage处理
     ElMessage.error('购物车数据加载失败')
   } finally {
     loading.value = false
@@ -239,8 +243,8 @@ const onQuantityChange = (item: CartListDto, val: number) => {
       await updateCartQuantity({ id: item.id, quantity: val })
       debounceTimers.delete(item.id)
     } catch (e) {
-      console.error(e)
-      ElMessage.warning('数量同步失败，请刷新页面')
+      //车操作异常已由 ElMessage处理
+      showWarning('数量同步失败，请刷新页面')
       loadData()
     }
   }, 500)
@@ -251,12 +255,12 @@ const handleDelete = async (ids: number[]) => {
   if (!ids.length) return
   try {
     await deleteCartItems(ids)
-    ElMessage.success('已移除商品')
+    showSuccess('已移除商品')
     
     cartList.value = cartList.value.filter(item => !ids.includes(item.id))
     selectionSet.value = selectionSet.value.filter(id => !ids.includes(id))
   } catch (e) {
-    ElMessage.error('删除失败')
+    showError('删除失败')
   }
 }
 
@@ -272,12 +276,34 @@ const handleBatchDelete = async () => {
   }
 }
 
-const handleCheckout = () => {
-  if (!selectionSet.value.length) return ElMessage.warning('请至少选择一件商品')
-  router.push({
-    path: '/order/create',
-    query: { cartIds: selectionSet.value.join(',') }
-  })
+const handleCheckout = async () => {
+  if (!selectionSet.value.length) return showWarning('请至少选择一件商品')
+  
+  checkoutLoading.value = true
+  
+  // 检查选中商品的库存
+  const selectedItems = cartList.value.filter(item => selectionSet.value.includes(item.id))
+  for (const item of selectedItems) {
+    if (item.quantity > item.productQuantity) {
+      checkoutLoading.value = false
+      return showWarning(`商品《${item.productTitle}》库存不足，当前库存: ${item.productQuantity}，请求购买: ${item.quantity}`)
+    }
+  }
+  
+  try {
+    // 模拟处理延迟，提升用户体验
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    router.push({
+      path: '/order/create',
+      query: { cartIds: selectionSet.value.join(',') }
+    })
+  } catch (error) {
+    console.error(error)
+    showError('跳转失败，请重试')
+  } finally {
+    checkoutLoading.value = false
+  }
 }
 
 const navigateToProduct = (productId: number | string) => {
@@ -524,4 +550,25 @@ onMounted(() => {
 .fade-down-enter-from { opacity: 0; transform: translateY(-20px); }
 .fade-up-enter-from { opacity: 0; transform: translateY(30px); }
 .slide-up-enter-from { transform: translateY(100%); }
+
+/*按钮悬停效果 */
+.cart-btn-hover {
+  transition: all 0.2s ease;
+}
+
+.cart-btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* 数量输入框动画 */
+.quantity-change {
+  animation: quantityChange 0.3s ease;
+}
+
+@keyframes quantityChange {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
 </style>

@@ -2,9 +2,11 @@ package com.cjh.backend.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+@Slf4j
 @Component
 public class LogInterceptor implements HandlerInterceptor {
 
@@ -30,13 +32,10 @@ public class LogInterceptor implements HandlerInterceptor {
         String uri = request.getRequestURI();
         int status = response.getStatus();
 
-        System.out.println(String.format(
-                "[请求完成] %s %s -> 状态码: %d, 耗时: %dms",
-                method, uri, status, duration
-        ));
+        log.info("[请求完成] {} {} -> 状态码: {},耗: {}ms", method, uri, status, duration);
 
         if (ex != null) {
-            System.out.println("[异常] " + ex.getMessage());
+            log.error("[异常] {}", ex.getMessage(), ex);
         }
     }
 }

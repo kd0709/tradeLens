@@ -190,7 +190,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
                 
         // 如果是已支付订单，需要处理退款
         if (order.getStatus() == 2) {  //已支付状态
-            // TODO:这里应该调用支付宝退款接口
+            // FIXME:需要集成支付宝退款接口
             // alipayClient.execute(refundRequest);
             //暂记录日志，实际项目中需要接入支付宝退款API
             log.info("订单 {}已支付，需要执行退款操作", orderNo);

@@ -180,7 +180,7 @@ const loadCategories = async () => {
       ...catList.map((cat: any) => ({ id: cat.id, name: cat.name }))
     ]
   } catch (error) {
-    console.error('加载分类失败:', error)
+    // 加载分类失败已由 ElMessage统处理
   }
 }
 
@@ -201,7 +201,7 @@ const loadData = async () => {
     productList.value = res.list || [] 
     total.value = Number(res.total) || 0 
   } catch (error) {
-    console.error('加载商品列表失败:', error)
+    // 加载商品失败已由 ElMessage统一处理
     productList.value = []
     total.value = 0
   } finally {

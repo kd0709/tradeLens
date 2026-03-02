@@ -118,6 +118,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { View, Star, ShoppingCart } from '@element-plus/icons-vue'
+import { showSuccess, showError, showWarning, showInfo } from '@/utils/message'
 
 import { getProductDetail } from '@/api/product'
 import { addToCart } from '@/api/cart'
@@ -157,7 +158,7 @@ const loadDetail = async () => {
       currentImage.value = getFullImageUrl(product.value.images[0])
     }
   } catch (error) {
-    console.error(error)
+    // 商品详情加载失败已由 ElMessage处理
     ElMessage.error('获取商品详情失败')
   } finally {
     loading.value = false
@@ -170,7 +171,7 @@ const handleBuy = () => {
   
   // 检查库存是否充足
   if (product.value.quantity <= 0) {
-    ElMessage.warning('抱歉，该商品库存不足，无法购买')
+    showWarning('抱歉，该商品库存不足，无法购买')
     return
   }
   
@@ -182,12 +183,35 @@ const handleBuy = () => {
 
 const handleAddToCart = async () => {
   if (!product.value) return
+  
+  //检查库存是否充足
+  if (product.value.quantity <= 0) {
+    showWarning('抱歉，该商品库存不足，无法加入购物车')
+    return
+  }
+  
+  const loadingMsg = ElMessage({
+    message: '正在添加到购物车...',
+    duration: 0,
+    icon: 'Loading'
+  })
+  
   try {
     await addToCart({ productId: product.value.id, quantity: 1 })
-    ElMessage.success('成功加入购物车！')
+    loadingMsg.close()
+    showSuccess('成功加入购物车！', 2000)
+    
+    // 添加按钮动画效果
+    const btn = document.querySelector('.cart-btn')
+    if (btn) {
+      btn.classList.add('cart-btn-animate')
+      setTimeout(() => {
+        btn.classList.remove('cart-btn-animate')
+      }, 600)
+    }
   } catch (e: any) {
-    console.error(e)
-    ElMessage.error(e.message || '加入购物车失败')
+    loadingMsg.close()
+    showError(e.message || '加入购物车失败', 3000)
   }
 }
 
@@ -203,16 +227,16 @@ const toggleLike = async () => {
         isLiked.value = serverStatus
     }
     
-    ElMessage.success(serverStatus ? '已添加至收藏夹' : '已取消收藏')
+    showSuccess(serverStatus ? '已添加至收藏夹' : '已取消收藏')
   } catch (error) {
-    console.error(error)
+    // 商品详情加载失败已由 ElMessage处理
     isLiked.value = !isLiked.value 
-    ElMessage.error('操作失败')
+    showError('操作失败')
   }
 }
 
 const handleChat = () => {
-  ElMessage.info('私信聊天功能正在开发中，敬请期待...')
+  showInfo('私信聊天功能正在开发中，敬请期待...')
 }
 onMounted(() => {
   loadDetail()
@@ -462,7 +486,7 @@ onMounted(() => {
   }
 }
 
-/* 过渡动画 */
+/*过渡动画 */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
   transition: all 0.4s ease;
@@ -474,6 +498,41 @@ onMounted(() => {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-20px);
+}
+
+/*车按钮动画 */
+.cart-btn-animate {
+  animation: cartPulse 0.6s ease-in-out;
+}
+
+@keyframes cartPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4); }
+  100% { transform: scale(1); }
+}
+
+/*心动画 */
+.btn-heart-beat {
+  animation: heartBeat 0.6s ease-in-out;
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.1); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.1); }
+  70% { transform: scale(1); }
+}
+
+/*点击效果动画 */
+.btn-click-effect {
+  animation: clickEffect 0.3s ease-out;
+}
+
+@keyframes clickEffect {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
 }
 
 /* 响应式适配 */
