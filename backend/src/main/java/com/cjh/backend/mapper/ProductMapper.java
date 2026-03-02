@@ -1,8 +1,10 @@
+
 package com.cjh.backend.mapper;
 
 import com.cjh.backend.dto.Product.ProductDetailDto;
 import com.cjh.backend.dto.Product.ProductListDto;
 import com.cjh.backend.dto.Product.ProductMyDto;
+import com.cjh.backend.dto.SystemProductDto;
 import com.cjh.backend.entity.Product;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.cjh.backend.entity.ProductImage;
@@ -15,11 +17,11 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
-* @author 45209
-* @description 针对表【product(商品表)】的数据库操作Mapper
-* @createDate 2026-01-29 18:58:49
-* @Entity com.cjh.backend.entity.Product
-*/
+ * @author 45209
+ * @description 针对表【product(商品表)】的数据库操作Mapper
+ * @createDate 2026-01-29 18:58:49
+ * @Entity com.cjh.backend.entity.Product
+ */
 
 @Mapper
 public interface ProductMapper extends BaseMapper<Product> {
@@ -138,7 +140,48 @@ public interface ProductMapper extends BaseMapper<Product> {
      * 删除商品的所有图片记录
      */
     int deleteProductImages(@Param("productId") Long productId);
+
+    /**
+     * 系统管理 - 分页查询商品列表（包含主图信息）
+     */
+    List<SystemProductDto> selectSystemProductPage(
+            @Param("keyword") String keyword,
+            @Param("productStatus") Integer productStatus,
+            @Param("offset") Integer offset,
+            @Param("size") Integer size
+    );
+
+    /**
+     * 系统管理 - 统计商品总数
+     */
+    int countSystemProducts(
+            @Param("keyword") String keyword,
+            @Param("productStatus") Integer productStatus
+    );
+
+    /**
+     * 扣减商品库存
+     */
+    int decreaseProductQuantity(
+            @Param("productId") Long productId,
+            @Param("quantity") Integer quantity
+    );
+
+    /**
+     * 增加商品库存
+     */
+    int increaseProductQuantity(
+            @Param("productId") Long productId,
+            @Param("quantity") Integer quantity
+    );
+
+    /**
+     * 检查商品库存
+     */
+    int checkProductStock(@Param("productId") Long productId);
 }
+
+
 
 
 

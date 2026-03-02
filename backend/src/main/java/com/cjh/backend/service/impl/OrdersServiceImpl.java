@@ -66,6 +66,12 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
                 throw new RuntimeException("商品 " + (product != null ? product.getTitle() : "") + " 已失效");
             }
 
+            // 检查库存是否充足
+            int stock = productMapper.checkProductStock(itemReq.getProductId());
+            if (stock < itemReq.getQuantity()) {
+                throw new RuntimeException("商品 " + product.getTitle() + " 库存不足，当前库存: " + stock + ", 请求数量: " + itemReq.getQuantity());
+            }
+
             BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(itemTotal);
 
@@ -141,6 +147,26 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             throw new RuntimeException("订单状态不允许取消");
         }
 
+        // 如果订单已支付但未发货，则需要回滚库存
+        if (order.getStatus() == 2) {  // 已支付状态
+            List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
+            for (OrderItem item : orderItems) {
+                productMapper.increaseProductQuantity(item.getProductId(), item.getQuantity());
+                
+                // 如果商品状态已经是已售(4)，需要将其改回上架(2)
+                Product product = productMapper.selectById(item.getProductId());
+                if (product != null && product.getProductStatus() == 4) { // 4 = 已售
+                    // 检查是否还有其他已支付的订单使用该商品
+                    // 如果没有其他已支付订单占用库存，则可以恢复为上架状态
+                    int paidOrderItemCount = ordersMapper.countPaidOrdersByProductId(item.getProductId());
+                    if (paidOrderItemCount == 0) {
+                        product.setProductStatus(2); // 2 = 上架
+                        productMapper.updateById(product);
+                    }
+                }
+            }
+        }
+
         order.setStatus(5);
         int rows = ordersMapper.updateById(order);
         if (rows == 0) {
@@ -161,6 +187,17 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         order.setStatus(4);
         order.setFinishTime(LocalDateTime.now());
+        
+        // 更新订单相关商品状态为已售
+        List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
+        for (OrderItem item : orderItems) {
+            Product product = productMapper.selectById(item.getProductId());
+            if (product != null) {
+                product.setProductStatus(4); // 4 = 已售
+                productMapper.updateById(product);
+            }
+        }
+        
         int rows = ordersMapper.updateById(order);
         if (rows == 0) {
             throw new IllegalStateException("确认收货失败");
@@ -209,8 +246,8 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
         request.setBizContent(bizContent.toString());
 
-        order.setStatus(2);
-        order.setPayTime(LocalDateTime.now());
+        // 注意：库存扣减将在支付宝异步通知中处理
+        order.setStatus(1); // 保持待支付状态直到收到支付宝通知
         ordersMapper.updateById(order);
 
         try {

@@ -21,4 +21,6 @@ public class CartListDto {
     private String productImage;   // 主图
 
     private LocalDateTime createTime;
+    
+    private Integer productQuantity;
 }

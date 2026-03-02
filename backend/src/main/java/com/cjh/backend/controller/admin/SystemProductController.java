@@ -1,7 +1,7 @@
 package com.cjh.backend.controller.admin;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cjh.backend.dto.SystemProductDto;
 import com.cjh.backend.entity.Product;
 import com.cjh.backend.service.ProductService;
 import com.cjh.backend.utils.Result;
@@ -25,7 +25,7 @@ public class SystemProductController {
      * 1. 分页查询所有商品 (支持多条件筛选)
      */
     @GetMapping("/page")
-    public Result<Page<Product>> getProductPage(
+    public Result<Page<SystemProductDto>> getProductPage(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String keyword,
@@ -33,24 +33,10 @@ public class SystemProductController {
         
         log.info("System Admin - 分页查询商品：page={}, size={}, keyword={}, status={}", page, size, keyword, productStatus);
         
-        Page<Product> pageParam = new Page<>(page, size);
-        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();
-        
-        // 排除已逻辑删除的商品
-        wrapper.eq(Product::getIsDeleted, 0);
-
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(Product::getTitle, keyword)
-                              .or()
-                              .like(Product::getDescription, keyword));
-        }
-        
-        if (productStatus != null) {
-            wrapper.eq(Product::getProductStatus, productStatus);
-        }
-        
-        wrapper.orderByDesc(Product::getCreateTime);
-        return Result.success(productService.page(pageParam, wrapper));
+        // 使用新的分页方法，包含主图信息
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SystemProductDto> resultPage = 
+            productService.pageSystemProducts(keyword, productStatus, page, size);
+        return Result.success(resultPage);
     }
 
     /**

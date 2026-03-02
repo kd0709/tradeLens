@@ -3,7 +3,10 @@ package com.cjh.backend.controller;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.cjh.backend.config.AlipayConfig;
 import com.cjh.backend.entity.Orders;
+import com.cjh.backend.entity.OrderItem;
 import com.cjh.backend.mapper.OrdersMapper;
+import com.cjh.backend.mapper.OrderItemMapper;
+import com.cjh.backend.mapper.ProductMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,6 +24,10 @@ public class AlipayController {
 
     private final AlipayConfig alipayConfig;
     private final OrdersMapper ordersMapper;
+    private final OrderItemMapper orderItemMapper;
+    
+    private final ProductMapper productMapper;
+
 
     @PostMapping("/notify")
     public String handleNotify(HttpServletRequest request) throws Exception {
@@ -78,6 +86,19 @@ public class AlipayController {
         // 8. 更新订单状态
         order.setStatus(2); // 2 = 已支付待发货
         order.setPayTime(LocalDateTime.now());
+        
+        // 9. 扣减商品库存
+        // 首先获取订单项
+        List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
+        for (OrderItem item : orderItems) {
+            int affectedRows = productMapper.decreaseProductQuantity(item.getProductId(), item.getQuantity());
+            if (affectedRows == 0) {
+                // 库存扣减失败，可以选择发送警告或采取其他措施
+                // 这里记录日志但不中断支付流程，因为支付已经完成
+                System.out.println("警告：商品 " + item.getProductTitle() + " 库存扣减失败，可能库存不足");
+            }
+        }
+        
         ordersMapper.updateById(order);
 
         return "success";

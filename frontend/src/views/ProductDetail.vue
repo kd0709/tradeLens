@@ -46,6 +46,11 @@
                   {{ getConditionText(product.conditionLevel) }}
                 </el-tag>
               </div>
+              <div class="stock-row">
+                <el-tag :type="product.quantity > 5 ? 'success' : product.quantity > 0 ? 'warning' : 'danger'">
+                  库存: {{ product.quantity }}
+                </el-tag>
+              </div>
               <div class="meta-row">
                 <span><el-icon><View /></el-icon> {{ product.viewCount }} 人围观</span>
                 <el-divider direction="vertical" />
@@ -162,6 +167,13 @@ const loadDetail = async () => {
 
 const handleBuy = () => {
   if (!product.value) return
+  
+  // 检查库存是否充足
+  if (product.value.quantity <= 0) {
+    ElMessage.warning('抱歉，该商品库存不足，无法购买')
+    return
+  }
+  
   router.push({ 
     path: '/order/create', 
     query: { productId: product.value.id } 
@@ -342,6 +354,15 @@ onMounted(() => {
       .currency { font-size: 20px; color: #ef4444; font-weight: bold; }
       .amount { font-size: 40px; color: #ef4444; font-weight: 800; letter-spacing: -1px; }
       .condition-tag { margin-left: 16px; transform: translateY(-8px); }
+    }
+    
+    .stock-row {
+      margin-bottom: 12px;
+      
+      .el-tag {
+        font-size: 14px;
+        padding: 6px 12px;
+      }
     }
     
     .meta-row {

@@ -50,6 +50,16 @@ public interface OrdersMapper extends BaseMapper<Orders> {
     @Select("SELECT * FROM tradelens.orders WHERE order_no = #{orderNo}")
     Orders selectByOrderNo(@Param("orderNo") String orderNo);
 
+    /**
+     * 统计指定商品的已支付订单数量
+     */
+    @Select("""
+        SELECT COUNT(*) FROM tradelens.orders o
+        JOIN tradelens.order_item oi ON o.id = oi.order_id
+        WHERE oi.product_id = #{productId}
+        AND o.status = 2  -- 已支付状态
+        """)
+    int countPaidOrdersByProductId(@Param("productId") Long productId);
 
 }
 

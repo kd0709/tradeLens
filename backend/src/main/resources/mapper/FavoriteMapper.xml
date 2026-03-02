@@ -22,10 +22,10 @@
             f.product_id,
             p.title,
             p.price,
-            (SELECT image_url FROM tradelens.product_image WHERE product_id = f.product_id ORDER BY sort ASC LIMIT 1) AS image_url,
+            (SELECT image_url FROM product_image WHERE product_id = f.product_id ORDER BY sort ASC LIMIT 1) AS image_url,
             f.create_time
-        FROM tradelens.favorite f
-                 LEFT JOIN tradelens.product p ON f.product_id = p.id
+        FROM favorite f
+                 LEFT JOIN product p ON f.product_id = p.id
         WHERE f.user_id = #{userId}
         ORDER BY f.create_time DESC
     </select>

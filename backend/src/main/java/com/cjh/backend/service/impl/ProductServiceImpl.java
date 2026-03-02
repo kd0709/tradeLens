@@ -165,4 +165,20 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
 
         return true;
     }
+
+    @Override
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<SystemProductDto> pageSystemProducts(String keyword, Integer productStatus, Integer page, Integer size) {
+        int offset = (page - 1) * size;
+        
+        List<SystemProductDto> list = productMapper.selectSystemProductPage(keyword, productStatus, offset, size);
+        int total = productMapper.countSystemProducts(keyword, productStatus);
+        
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SystemProductDto> resultPage = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>();
+        resultPage.setRecords(list);
+        resultPage.setTotal(total);
+        resultPage.setCurrent(page);
+        resultPage.setSize(size);
+        
+        return resultPage;
+    }
 }

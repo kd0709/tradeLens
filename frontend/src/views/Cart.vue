@@ -77,11 +77,14 @@
                     <el-input-number 
                       v-model="item.quantity" 
                       :min="1" 
-                      :max="99"
+                      :max="Math.min(99, item.productQuantity || 99)"
                       size="small"
                       @change="(val: number) => onQuantityChange(item, val)"
                       class="custom-input-number"
                     />
+                    <div class="stock-info">
+                      库存: {{ item.productQuantity }}
+                    </div>
                   </div>
 
                   <div class="col-total center">
@@ -443,6 +446,8 @@ onMounted(() => {
 
   .price-text { color: #4b5563; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   .total-text { color: #ef4444; font-weight: 700; font-size: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  
+  .stock-info { margin-left: 10px; font-size: 12px; color: #6b7280; }
   
   .delete-btn {
     font-size: 18px; color: #9ca3af;

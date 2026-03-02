@@ -28,14 +28,14 @@
       </div>
 
       <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%">
-        <el-table-column prop="id" label="商品ID" width="80" align="center" />
+        <el-table-column prop="id" label="商品ID" width="70" align="center" />
         
-        <!-- <el-table-column label="商品图片" width="100" align="center">
+        <el-table-column label="商品图片" width="100" align="center">
           <template #default="{ row }">
             <el-image 
-              style="width: 60px; height: 60px; border-radius: 4px; border: 1px solid #eee;"
-              :src="getFullImageUrl(row.images)" 
-              :preview-src-list="row.images || []"
+              style="width: 60px; height: 60px; border-radius: 4px; border: 1px solid #eee; object-fit: cover;"
+              :src="getFullImageUrl(row.mainImage)" 
+              :preview-src-list="[getFullImageUrl(row.mainImage)]"
               :initial-index="0"
               fit="cover"
               preview-teleported
@@ -47,29 +47,32 @@
               </template>
             </el-image>
           </template>
-        </el-table-column> -->
+        </el-table-column>
 
-        <el-table-column prop="title" label="商品标题" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="price" label="价格(元)" width="100" align="center">
+        <el-table-column prop="title" label="商品标题" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="price" label="价格(元)" width="80" align="center">
           <template #default="{ row }">
             <span style="color: #f56c6c; font-weight: bold;">¥{{ row.price }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="conditionLevel" label="成色" width="100" align="center">
+        <el-table-column prop="conditionLevel" label="成色" width="80" align="center">
           <template #default="{ row }">
-            <el-tag type="info" effect="plain">{{ getConditionText(row.conditionLevel) }}</el-tag>
+            <el-tag type="info" effect="plain" size="small">{{ getConditionText(row.conditionLevel) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="商品状态" width="120" align="center">
+        <el-table-column prop="quantity" label="库存" width="70" align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.productStatus)">
-              {{ getStatusText(row.productStatus) }}
-            </el-tag>
+            <el-tag :type="row.quantity > 5 ? 'success' : row.quantity > 0 ? 'warning' : 'danger'" size="small">{{ row.quantity }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="发布时间" width="170" align="center" />
+        <el-table-column label="商品状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.productStatus)" size="small">{{ getStatusText(row.productStatus) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="发布时间" width="140" align="center" />
         
-        <el-table-column label="操作" width="220" align="center" fixed="right">
+        <el-table-column label="操作" width="160" align="center" fixed="right">
           <template #default="{ row }">
             <template v-if="row.productStatus === 1">
               <el-button type="success" link icon="Check" @click="handleAudit(row, 2)">通过</el-button>
@@ -140,6 +143,7 @@ const fetchData = async () => {
     const res: any = await getSystemProductPage(queryParams)
     tableData.value = res.records
     total.value = res.total
+    console.log(total.value)
   } catch (error) {
     console.error(error)
   } finally {

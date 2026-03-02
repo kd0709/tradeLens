@@ -4,6 +4,7 @@ export interface CartListDto {
   productTitle: string
   price: number
   quantity: number
+  productQuantity: number
   productImage: string
   createTime: string
 }

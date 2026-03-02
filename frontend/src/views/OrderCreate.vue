@@ -67,6 +67,11 @@
                 <span class="label">数量：</span>
                 <span>x {{ item.quantity }}</span>
               </div>
+              <div class="stock-info">
+                <el-tag :type="item.productQuantity > 5 ? 'success' : item.productQuantity > 0 ? 'warning' : 'danger'">
+                  库存: {{ item.productQuantity }}
+                </el-tag>
+              </div>
             </div>
           </div>
         </div>
@@ -185,7 +190,8 @@ const orderItems = ref<Array<{
   price: number
   image: string
   conditionLevel?: number
-  quantity: number 
+  quantity: number
+  productQuantity: number 
 }>>([])
 const addressForm = reactive<Partial<AddressDto>>({
   receiverName: '',
@@ -263,7 +269,8 @@ const initData = async () => {
         price: detail.price,
         image: detail.images?.[0] || '',
         conditionLevel: detail.conditionLevel,
-        quantity: 1
+        quantity: 1,
+        productQuantity: detail.quantity
       }]
     } else if (cartIds) {
       const ids = String(cartIds)
@@ -286,7 +293,8 @@ const initData = async () => {
           price: Number(item.price),
           image: item.productImage || '',
           conditionLevel: undefined,
-          quantity: Number(item.quantity) || 1
+          quantity: Number(item.quantity) || 1,
+          productQuantity: item.productQuantity
         }))
     } else {
       ElMessage.warning('缺少必要参数（商品或购物车）')
@@ -331,6 +339,13 @@ const handleSubmit = async () => {
     return ElMessage.warning('请选择收货地址')
   }
   if (!orderItems.value.length) return
+  
+  // 1.5. 库存校验
+  for (const item of orderItems.value) {
+    if (item.quantity > item.productQuantity) {
+      return ElMessage.error(`商品《${item.title}》库存不足，当前库存: ${item.productQuantity}，请求购买: ${item.quantity}`)
+    }
+  }
 
   submitting.value = true
   
@@ -458,6 +473,7 @@ onMounted(initData)
     flex: 1; display: flex; flex-direction: column; justify-content: space-between;
     .title { font-size: 15px; font-weight: 500; }
     .price-line .price { color: #ef4444; font-weight: bold; }
+    .stock-info { margin-top: 6px; }
   }
 }
 

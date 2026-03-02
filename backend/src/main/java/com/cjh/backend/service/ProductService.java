@@ -32,4 +32,8 @@ public interface ProductService extends IService<Product> {
 
     boolean updateProduct(Long userId, ProductUpdateDto req);
 
+    // 系统管理相关
+    com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.cjh.backend.dto.SystemProductDto> pageSystemProducts(
+            String keyword, Integer productStatus, Integer page, Integer size);
+
 }
