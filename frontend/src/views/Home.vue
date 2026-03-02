@@ -119,6 +119,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 import { getProductList } from '@/api/product'
 import { getCategoryList } from '@/api/category'
@@ -280,9 +281,22 @@ watch(() => route.query.q, (newVal) => {
 })
 
 onMounted(async () => {
+  if (route.query.from === 'alipay') {
+    ElMessage.success('支付成功')
+
+    const newQuery = { ...route.query }
+    delete newQuery.from
+
+    router.replace({
+      path: '/',
+      query: newQuery
+    })
+  }
+
   if (route.query.q) {
     queryParams.keyword = route.query.q as string
   }
+
   await loadCategories()
   loadData()
 })
@@ -300,7 +314,6 @@ onMounted(async () => {
   padding: 0 20px;
 }
 
-/* 1. Banner 区域样式 (保持不变) */
 .banner-section-wrapper {
   position: relative;
   overflow: hidden;

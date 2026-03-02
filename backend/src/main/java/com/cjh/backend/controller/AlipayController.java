@@ -17,31 +17,69 @@ import java.util.Map;
 @RequestMapping("/api/alipay")
 @RequiredArgsConstructor
 public class AlipayController {
+
     private final AlipayConfig alipayConfig;
     private final OrdersMapper ordersMapper;
 
     @PostMapping("/notify")
     public String handleNotify(HttpServletRequest request) throws Exception {
+
+        // 1. 获取支付宝回调参数
         Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
+
         for (String name : requestParams.keySet()) {
             params.put(name, request.getParameter(name));
         }
 
-        // 验证签名是否来自支付宝
-        boolean verifyResult = AlipaySignature.rsaCheckV1(params, alipayConfig.getAlipayPublicKey(), 
-                alipayConfig.getCharset(), alipayConfig.getSignType());
+        // 2. 验证签名
+        boolean verifyResult = AlipaySignature.rsaCheckV1(
+                params,
+                alipayConfig.getAlipayPublicKey(),
+                alipayConfig.getCharset(),
+                alipayConfig.getSignType()
+        );
 
-        if (verifyResult && "TRADE_SUCCESS".equals(params.get("trade_status"))) {
-            String orderNo = params.get("out_trade_no");
-            Orders order = ordersMapper.selectByOrderNo(orderNo);
-            if (order != null && order.getStatus() == 1) {
-                order.setStatus(2); // 支付成功，状态转为待发货
-                order.setPayTime(LocalDateTime.now());
-                ordersMapper.updateById(order);
-            }
-            return "success"; // 告知支付宝已处理
+        if (!verifyResult) {
+            return "fail";
         }
-        return "fail";
+
+        // 3. 判断交易状态
+        String tradeStatus = params.get("trade_status");
+        if (!"TRADE_SUCCESS".equals(tradeStatus)) {
+            return "fail";
+        }
+
+        // 4. 校验 appId
+        if (!alipayConfig.getAppId().equals(params.get("app_id"))) {
+            return "fail";
+        }
+
+        // 5. 获取订单号和金额
+        String orderNo = params.get("out_trade_no");
+        String totalAmount = params.get("total_amount");
+
+        Orders order = ordersMapper.selectByOrderNo(orderNo);
+
+        if (order == null) {
+            return "fail";
+        }
+
+        // 6. 校验金额
+//        if (!order.getTotalAmount().toString().equals(totalAmount)) {
+//            return "fail";
+//        }
+
+        // 7. 幂等处理（已支付直接返回 success）
+        if (order.getStatus() != 1) {
+            return "success";
+        }
+
+        // 8. 更新订单状态
+        order.setStatus(2); // 2 = 已支付待发货
+        order.setPayTime(LocalDateTime.now());
+        ordersMapper.updateById(order);
+
+        return "success";
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "alipay")
 public class AlipayConfig {
+
     private String appId;
     private String merchantPrivateKey;
     private String alipayPublicKey;
@@ -22,6 +23,14 @@ public class AlipayConfig {
 
     @Bean
     public AlipayClient alipayClient() {
-        return new DefaultAlipayClient(gatewayUrl, appId, merchantPrivateKey, "json", charset, alipayPublicKey, signType);
+        return new DefaultAlipayClient(
+                gatewayUrl,
+                appId,
+                merchantPrivateKey,
+                "json",
+                charset,
+                alipayPublicKey,
+                signType
+        );
     }
 }

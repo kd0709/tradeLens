@@ -42,20 +42,18 @@
           </div>
         </div>
 
-        <div class="qr-section">
-          <div class="qr-box">
-             <div class="qr-placeholder" alipay>
-               <el-icon :size="40" color="#fff"><Money /></el-icon>
-             </div>
-             <p>打开支付宝扫一扫</p>
-          </div>
-        </div>
-
         <div class="actions">
-           <el-button @click="router.push('/user')">稍后支付</el-button>
-           <el-button type="primary" :loading="paying" @click="handleConfirmPay">
-             去支付
-           </el-button>
+          <el-button :disabled="paying" @click="router.push('/user')">
+            稍后支付
+          </el-button>
+          <el-button
+            type="primary"
+            :loading="paying"
+            :disabled="!order || order.status !== 1"
+            @click="handleConfirmPay"
+          >
+            去支付
+          </el-button>
         </div>
       </div>
     </div>
@@ -65,7 +63,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Timer, Select, Money } from '@element-plus/icons-vue'
+import { Timer, Select } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getOrderDetail, payOrder } from '@/api/order'
 import type { OrderDto } from '@/dto/order'
@@ -75,29 +73,60 @@ const router = useRouter()
 const order = ref<OrderDto | null>(null)
 const paying = ref(false)
 
+/**
+ * 加载订单
+ */
 const loadOrder = async () => {
-  const orderNo = route.params.id as string  
-  if (!orderNo) return
+  const orderNo = route.params.id as string
+  if (!orderNo) {
+    router.replace('/user')
+    return
+  }
+
   try {
-    order.value = await getOrderDetail(orderNo)
-    if (order.value.status !== 1) {  
+    const res = await getOrderDetail(orderNo)
+    order.value = res
+
+    if (!order.value) {
+      ElMessage.error('订单不存在')
+      router.replace('/user')
+      return
+    }
+
+    // ✅ 已支付直接跳首页并提示成功
+    if (order.value.status === 2) {
+      router.replace('/?paySuccess=true')
+      return
+    }
+
+    // 非待支付状态
+    if (order.value.status !== 1) {
       ElMessage.warning('该订单无需支付')
       router.replace('/user')
     }
-  } catch (e) { console.error(e) }
+
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('加载订单失败')
+    router.replace('/user')
+  }
 }
 
+/**
+ * 拉起支付宝
+ */
 const handleConfirmPay = async () => {
-  if (!order.value) return
+  if (!order.value || order.value.status !== 1) return
+
   paying.value = true
-  
+
   try {
-   const payHtml = await payOrder({
+    const payHtml = await payOrder({
       orderNo: order.value.orderNo,
       payType: 'alipay'
     })
-    
-   if (!payHtml) {
+
+    if (!payHtml) {
       throw new Error('未获取到支付宝支付表单')
     }
 
@@ -108,6 +137,7 @@ const handleConfirmPay = async () => {
 
     payWindow.document.write(payHtml)
     payWindow.document.close()
+
   } catch (e: any) {
     console.error(e)
     ElMessage.error(e?.message || '拉起支付宝失败，请稍后重试')
@@ -143,7 +173,7 @@ onMounted(() => {
 .header {
   text-align: center;
   margin-bottom: 40px;
-  
+
   .status-icon {
     width: 60px;
     height: 60px;
@@ -156,11 +186,11 @@ onMounted(() => {
     margin: 0 auto 16px;
     font-size: 30px;
   }
-  
+
   h2 { margin: 0 0 8px; color: #111827; }
   p { color: #6b7280; font-size: 14px; margin: 0; }
   .countdown { color: #ef4444; font-weight: bold; }
-  
+
   .amount {
     margin-top: 20px;
     color: #ef4444;
@@ -175,14 +205,15 @@ onMounted(() => {
   padding: 16px 24px;
   border-radius: 8px;
   margin-bottom: 30px;
-  
+
   .row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 8px;
     font-size: 14px;
+
     &:last-child { margin-bottom: 0; }
-    
+
     .label { color: #6b7280; }
     .val { color: #374151; font-weight: 500; }
   }
@@ -190,12 +221,13 @@ onMounted(() => {
 
 .payment-method {
   margin-bottom: 30px;
+
   .method-title { font-weight: 600; margin-bottom: 12px; }
-  
+
   .methods {
     display: flex;
     gap: 20px;
-    
+
     .method-item {
       flex: 1;
       border: 1px solid #e5e7eb;
@@ -204,16 +236,16 @@ onMounted(() => {
       display: flex;
       align-items: center;
       gap: 12px;
-      cursor: pointer;
       position: relative;
-      transition: all 0.2s;
-      
-      &:hover { border-color: #10b981; }
-      &.active { border-color: #10b981; background: #ecfdf5; }
-      
+
+      &.active {
+        border-color: #10b981;
+        background: #ecfdf5;
+      }
+
       img { width: 32px; height: 32px; }
       span { font-weight: 500; }
-      
+
       .check {
         position: absolute;
         right: 12px;
@@ -221,32 +253,6 @@ onMounted(() => {
         font-weight: bold;
       }
     }
-  }
-}
-
-.qr-section {
-  text-align: center;
-  margin-bottom: 40px;
-  
-  .qr-box {
-    display: inline-block;
-    padding: 20px;
-    border: 1px solid #f3f4f6;
-    border-radius: 12px;
-    
-    .qr-placeholder {
-      width: 180px;
-      height: 180px;
-      margin: 0 auto 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-    
-      &.alipay { background: #3b82f6; }
-    }
-    
-    p { margin: 0; font-size: 14px; color: #6b7280; }
   }
 }
 

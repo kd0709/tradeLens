@@ -29,6 +29,26 @@
 
       <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%">
         <el-table-column prop="id" label="商品ID" width="80" align="center" />
+        
+        <!-- <el-table-column label="商品图片" width="100" align="center">
+          <template #default="{ row }">
+            <el-image 
+              style="width: 60px; height: 60px; border-radius: 4px; border: 1px solid #eee;"
+              :src="getFullImageUrl(row.images)" 
+              :preview-src-list="row.images || []"
+              :initial-index="0"
+              fit="cover"
+              preview-teleported
+            >
+              <template #error>
+                <div class="image-slot">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
+          </template>
+        </el-table-column> -->
+
         <el-table-column prop="title" label="商品标题" min-width="180" show-overflow-tooltip />
         <el-table-column prop="price" label="价格(元)" width="100" align="center">
           <template #default="{ row }">
@@ -82,7 +102,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getSystemProductPage, updateSystemProduct, deleteSystemProduct } from '@/api/system'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Check, Close, WarnTriangleFilled, Delete, Search } from '@element-plus/icons-vue'
+// 引入 Picture 图标
+import { Check, Close, WarnTriangleFilled, Delete, Search, Picture } from '@element-plus/icons-vue'
+import { getFullImageUrl } from '@/utils/image'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -143,9 +165,7 @@ const handleAudit = async (row: any, targetStatus: number) => {
     await updateSystemProduct({ id: row.id, productStatus: targetStatus })
     ElMessage.success(`操作成功`)
     fetchData()
-  } catch (error) {
-    // 用户取消或请求失败
-  }
+  } catch (error) {}
 }
 
 // 强制下架违规商品
@@ -207,5 +227,16 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+/* 图片加载失败占位符样式 */
+.image-slot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f7fa;
+  color: #a8abb2;
+  font-size: 20px;
 }
 </style>
