@@ -69,6 +69,11 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             if (product == null || product.getProductStatus() != 2) {
                 throw new RuntimeException("商品 " + (product != null ? product.getTitle() : "") + "已失效");
             }
+            
+            //检查买家不能购买自己发布的商品
+            if (product.getUserId().equals(userId)) {
+                throw new RuntimeException("不能购买自己发布的商品");
+            }
         
             //检查是否跨卖家
             if (!sellerIds.isEmpty() && !sellerIds.contains(product.getUserId())) {
@@ -164,26 +169,27 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             throw new RuntimeException("订单状态不允许取消");
         }
         
-        // 如果订单已支付但未发货，则需要回滚库存和处理退款
-        if (order.getStatus() == 2) {  //已支付状态
-            List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
-            for (OrderItem item : orderItems) {
-                //回滚库存
-                productMapper.increaseProductQuantity(item.getProductId(), item.getQuantity());
-                        
-                // 如果商品状态已经是已售(4)，需要将其改回上架(2)
-                Product product = productMapper.selectById(item.getProductId());
-                if (product != null && product.getProductStatus() == 4) { // 4 = 已售
-                    // 检查是否还有其他已支付的订单使用该商品
-                    // 如果没有其他已支付订单占用库存，则可以恢复为上架状态
-                    int paidOrderItemCount = ordersMapper.countPaidOrdersByProductId(item.getProductId());
-                    if (paidOrderItemCount == 0) {
-                        product.setProductStatus(2); // 2 = 上架
-                        productMapper.updateById(product);
-                    }
+        //回滚库存（无论订单状态是待支付还是已支付）
+        List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
+        for (OrderItem item : orderItems) {
+            //回滚库存
+            productMapper.increaseProductQuantity(item.getProductId(), item.getQuantity());
+                            
+            // 如果商品状态已经是已售(4)，需要将其改回上架(2)
+            Product product = productMapper.selectById(item.getProductId());
+            if (product != null && product.getProductStatus() == 4) { // 4 =已售
+                //检查是否还有其他已支付的订单使用该商品
+                // 如果没有其他已支付订单占用库存，则可以恢复为上架状态
+                int paidOrderItemCount = ordersMapper.countPaidOrdersByProductId(item.getProductId());
+                if (paidOrderItemCount == 0) {
+                    product.setProductStatus(2); // 2 = 上架
+                    productMapper.updateById(product);
                 }
             }
-                    
+        }
+                
+        // 如果是已支付订单，需要处理退款
+        if (order.getStatus() == 2) {  //已支付状态
             // TODO:这里应该调用支付宝退款接口
             // alipayClient.execute(refundRequest);
             //暂记录日志，实际项目中需要接入支付宝退款API
@@ -222,8 +228,12 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
                     //没有库存了，标记为已售
                     product.setProductStatus(4); // 4 =已售
                 } else {
-                    //还有库存，保持上架状态
-                    product.setProductStatus(2); // 2 =上架
+                    //还有库存，但只在商品当前为"已售"状态时才改回上架
+                    //避免覆盖卖家手动设置的下架状态
+                    if (product.getProductStatus() == 4) { //只有当前是已售状态才改回上架
+                        product.setProductStatus(2); // 2 =上架
+                    }
+                    //如果当前是下架状态(3)或其他状态，则保持原状态不变
                 }
                 productMapper.updateById(product);
             }
@@ -277,8 +287,8 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
         request.setBizContent(bizContent.toString());
 
-        // 注意：库存扣减将在支付宝异步通知中处理
-        order.setStatus(1); // 保持待支付状态直到收到支付宝通知
+        // 注意：库存已在下单时预扣减，此处仅处理支付跳转
+        //订单状态保持为待支付(1)，等待支付宝回调更新为已支付(2)
         ordersMapper.updateById(order);
 
         try {
@@ -328,10 +338,23 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             int successCount = 0;
             for (Orders order : expiredOrders) {
                 try {
-                    //回滚库存
+                    //回滚库存并恢复商品状态
                     List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
                     for (OrderItem item : orderItems) {
+                        //回滚库存
                         productMapper.increaseProductQuantity(item.getProductId(), item.getQuantity());
+                        
+                        //恢复商品状态（如果当前是已售状态）
+                        Product product = productMapper.selectById(item.getProductId());
+                        if (product != null && product.getProductStatus() == 4) { // 4 =已售
+                            //检查是否还有其他已支付订单占用该商品
+                            int paidOrderItemCount = ordersMapper.countPaidOrdersByProductId(item.getProductId());
+                            if (paidOrderItemCount == 0) {
+                                product.setProductStatus(2); // 2 =上架
+                                productMapper.updateById(product);
+                                log.info("商品 {}状态已从已售恢复为上架", product.getId());
+                            }
+                        }
                     }
                     
                     // 更新订单状态为已取消

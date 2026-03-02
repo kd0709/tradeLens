@@ -83,22 +83,10 @@ public class AlipayController {
             return "success";
         }
 
-        // 8. 更新订单状态
-        order.setStatus(2); // 2 = 已支付待发货
+        // 8. 更新订单状态（库存已在下单时预扣减）
+        order.setStatus(2); // 2 =已支付待发货
         order.setPayTime(LocalDateTime.now());
-        
-        // 9. 扣减商品库存
-        // 首先获取订单项
-        List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
-        for (OrderItem item : orderItems) {
-            int affectedRows = productMapper.decreaseProductQuantity(item.getProductId(), item.getQuantity());
-            if (affectedRows == 0) {
-                // 库存扣减失败，可以选择发送警告或采取其他措施
-                // 这里记录日志但不中断支付流程，因为支付已经完成
-                System.out.println("警告：商品 " + item.getProductTitle() + " 库存扣减失败，可能库存不足");
-            }
-        }
-        
+                
         ordersMapper.updateById(order);
 
         return "success";
