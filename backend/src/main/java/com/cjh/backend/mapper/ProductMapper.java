@@ -178,7 +178,7 @@ public interface ProductMapper extends BaseMapper<Product> {
     /**
      * 检查商品库存
      */
-    int checkProductStock(@Param("productId") Long productId);
+    Integer checkProductStock(@Param("productId") Long productId);
 }
 
 
