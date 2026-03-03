@@ -193,6 +193,7 @@ const orderItems = ref<Array<{
   quantity: number
   productQuantity: number 
 }>>([])
+
 const addressForm = reactive<Partial<AddressDto>>({
   receiverName: '',
   receiverPhone: '',
@@ -211,6 +212,7 @@ const addressRules = {
   ],
   detailAddress: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
 }
+
 const totalPrice = computed(() => {
   const sum = orderItems.value.reduce((acc, item) => {
     const qty = item.quantity || 1
@@ -244,34 +246,38 @@ const loadAddresses = async () => {
       selectedAddressId.value = defaultAddr?.id ?? addressList.value[0]?.id
     }
   } catch (err) {
-    // 获取地址列表失败已由 ElMessage处理
+    // 忽略异常交由拦截器处理
   }
 }
 
 const initData = async () => {
   loading.value = true
   try {
-    await loadAddresses()
-
     const { productId, cartIds } = route.query
+    
+    // 开启并行请求：同时加载地址列表和商品/购物车信息
+    const addressPromise = loadAddresses()
+    let itemsPromise: Promise<void> = Promise.resolve()
 
     if (productId) {
       const pid = Number(productId)
       if (isNaN(pid)) {
         ElMessage.warning('无效的商品ID')
-        return router.back()
+        router.back()
+        return
       }
 
-      const detail = await getProductDetail(pid)
-      orderItems.value = [{
-        productId: detail.id,
-        title: detail.title,
-        price: detail.price,
-        image: detail.images?.[0] || '',
-        conditionLevel: detail.conditionLevel,
-        quantity: 1,
-        productQuantity: detail.quantity
-      }]
+      itemsPromise = getProductDetail(pid).then(detail => {
+        orderItems.value = [{
+          productId: detail.id,
+          title: detail.title,
+          price: detail.price,
+          image: detail.images?.[0] || '',
+          conditionLevel: detail.conditionLevel,
+          quantity: 1,
+          productQuantity: detail.quantity
+        }]
+      })
     } else if (cartIds) {
       const ids = String(cartIds)
         .split(',')
@@ -280,29 +286,34 @@ const initData = async () => {
 
       if (!ids.length) {
         ElMessage.warning('没有有效的购物车项')
-        return router.back()
+        router.back()
+        return
       }
 
-      const cartItems = await getCartList() || []
-
-      orderItems.value = cartItems
-        .filter(item => ids.includes(item.id))
-        .map(item => ({
-          productId: item.productId,
-          title: item.productTitle || '商品名称缺失',
-          price: Number(item.price),
-          image: item.productImage || '',
-          conditionLevel: undefined,
-          quantity: Number(item.quantity) || 1,
-          productQuantity: item.productQuantity
-        }))
+      itemsPromise = getCartList().then(res => {
+        const cartItems = res || []
+        orderItems.value = cartItems
+          .filter(item => ids.includes(item.id))
+          .map(item => ({
+            productId: item.productId,
+            title: item.productTitle || '商品名称缺失',
+            price: Number(item.price),
+            image: item.productImage || '',
+            conditionLevel: undefined,
+            quantity: Number(item.quantity) || 1,
+            productQuantity: item.productQuantity
+          }))
+      })
     } else {
       ElMessage.warning('缺少必要参数（商品或购物车）')
       router.back()
       return
     }
+
+    // 等待所有并行请求完成
+    await Promise.all([addressPromise, itemsPromise])
+
   } catch (err: any) {
-    //订单初始化失败已由 ElMessage处理
     ElMessage.error('加载订单信息失败')
     setTimeout(() => router.back(), 1200)
   } finally {
@@ -334,13 +345,11 @@ const handleSaveAddress = async () => {
 }
 
 const handleSubmit = async () => {
-  // 1. 基础校验
   if (!selectedAddressId.value) {
     return ElMessage.warning('请选择收货地址')
   }
   if (!orderItems.value.length) return
   
-  // 1.5. 库存校验
   for (const item of orderItems.value) {
     if (item.quantity > item.productQuantity) {
       return ElMessage.error(`商品《${item.title}》库存不足，当前库存: ${item.productQuantity}，请求购买: ${item.quantity}`)
@@ -350,40 +359,29 @@ const handleSubmit = async () => {
   submitting.value = true
   
   try {
-    // 2. 构造符合后端新 DTO 格式的数据
-    // 从路由 query 中获取需要清理的购物车 ID
     const cartIdList = route.query.cartIds 
       ? String(route.query.cartIds).split(',').map(id => Number(id)) 
       : []
 
     const dto = {
       addressId: selectedAddressId.value,
-      // 组装商品列表
       items: orderItems.value.map(item => ({
         productId: item.productId,
         quantity: item.quantity || 1
       })),
-      // 传入购物车 ID，让后端顺便把它们删了
       cartIds: cartIdList
     }
 
-    // 3. 发起【一次性】批量下单请求
-    // 注意：这里的 createOrder 接口现在接收的是包含列表的对象，不再是循环调用
     const result = await createOrder(dto)
 
-    // 4. 下单成功处理
     if (result && result.orderNo) {
       ElMessage.success('订单创建成功')
-      // 跳转到支付页，传递这个包含多个商品的统一订单号
       router.replace(`/pay/${result.orderNo}`)
     } else {
-      // 如果后端返回结构不同，跳转到订单列表页
       router.replace('/user/orders')
     }
     
   } catch (err: any) {
-    //订单创建失败已由 ElMessage处理
-    // 具体的错误提示（如：商品库存不足、商品不可购买等）
     ElMessage.error(err.response?.data?.message || '创建订单失败，请稍后重试')
   } finally {
     submitting.value = false

@@ -72,8 +72,7 @@
         <div class="image-wrapper">
           <img 
             :src="getFullImageUrl(item.mainImage)" 
-            :alt="item.title" 
-            loading="lazy" 
+            :alt="item.title"
           />
           <div class="condition-tag" v-if="item.conditionLevel">
             {{ getConditionText(item.conditionLevel) }}
@@ -199,9 +198,9 @@ const loadData = async () => {
     
     const res = await getProductList(params)
     productList.value = res.list || [] 
-    total.value = Number(res.total) || 0 
+    total.value = Number(res.total) || 0
+    console.log('加载商品列表成功:', total.value) 
   } catch (error) {
-    // 加载商品失败已由 ElMessage统一处理
     productList.value = []
     total.value = 0
   } finally {

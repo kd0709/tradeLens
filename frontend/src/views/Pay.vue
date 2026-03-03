@@ -129,19 +129,15 @@ const handleConfirmPay = async () => {
     if (!payHtml) {
       throw new Error('未获取到支付宝支付表单')
     }
-
-    const payWindow = window.open('', '_self')
-    if (!payWindow) {
-      throw new Error('浏览器拦截了支付跳转，请允许弹窗后重试')
-    }
-
-    payWindow.document.write(payHtml)
-    payWindow.document.close()
+    
+    const newWindow = window.open('', '_self')
+    newWindow!.document.open()
+    newWindow!.document.write(payHtml)
+    newWindow!.document.close()
 
   } catch (e: any) {
     console.error(e)
     ElMessage.error(e?.message || '拉起支付宝失败，请稍后重试')
-  } finally {
     paying.value = false
   }
 }

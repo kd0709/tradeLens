@@ -40,7 +40,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        if (path.startsWith("/api/auth/") || path.equals("/error") || path.startsWith("/images/")) {
+        if (path.startsWith("/api/auth/") || path.equals("/error") || path.startsWith("/images/") || path.equals("/api/alipay/notify")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -68,7 +68,7 @@ public class JwtFilter extends OncePerRequestFilter {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         userId,
-                        token,
+                        null,
                         Collections.emptyList()
                 );
 

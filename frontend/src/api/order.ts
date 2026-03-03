@@ -34,6 +34,7 @@ export function payOrder(data: OrderPayDto): Promise<string> {
   return request.post('/api/order/pay', data)
 }
 
+
 export function deliverOrder(query: OrderDeliverDto): Promise<void> {
   return request.post(`/api/order/deliver`, null, {
     params: {
