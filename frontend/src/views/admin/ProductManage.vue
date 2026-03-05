@@ -143,7 +143,6 @@ const fetchData = async () => {
     const res: any = await getSystemProductPage(queryParams)
     tableData.value = res.records
     total.value = res.total
-    console.log(total.value)
   } catch (error) {
     console.error(error)
   } finally {

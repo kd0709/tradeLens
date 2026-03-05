@@ -92,6 +92,14 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             if (affectedRows == 0) {
                 throw new RuntimeException("商品 " + product.getTitle() + "库扣减失败，请重试");
             }
+            //新增逻辑开始：扣减后立即检查库存，若售空则马上标记为4(已售空)
+            Integer remainingStock = productMapper.checkProductStock(itemReq.getProductId());
+            if (remainingStock != null && remainingStock <= 0) {
+                Product pToUpdate = new Product();
+                pToUpdate.setId(itemReq.getProductId());
+                pToUpdate.setProductStatus(4); // 4 = 已售空
+                productMapper.updateById(pToUpdate);
+            }
         
             BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(itemTotal);
@@ -190,9 +198,8 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
                 
         // 如果是已支付订单，需要处理退款
         if (order.getStatus() == 2) {  //已支付状态
-            // FIXME:需要集成支付宝退款接口
             // alipayClient.execute(refundRequest);
-            //暂记录日志，实际项目中需要接入支付宝退款API
+            //暂记录日志，实际项目中需要接入支付宝退款 API
             log.info("订单 {}已支付，需要执行退款操作", orderNo);
         }
 

@@ -85,4 +85,9 @@ public class Orders {
      * 完成时间
      */
     private LocalDateTime finishTime;
+
+    /**
+     * 是否已评价：0-未评价，1-已评价
+     */
+    private Integer isCommented;
 }

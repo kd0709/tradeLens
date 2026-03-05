@@ -54,6 +54,7 @@ export interface OrderDto {
   deliveryTime?: string
   finishTime?: string
   items: OrderItemDto[]  // 订单明细（详情接口返回）
+  isCommented?: number
 }
 
 // 订单列表查询参数

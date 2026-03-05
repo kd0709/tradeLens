@@ -44,6 +44,7 @@ export interface ProductMyDto {
   productStatus: number
   mainImage: string
   createTime: string
+  quantity: number // 新增：库存余量字段
 }
 
 

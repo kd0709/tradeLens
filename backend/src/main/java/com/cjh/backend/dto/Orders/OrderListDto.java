@@ -31,4 +31,6 @@ public class OrderListDto {
     private LocalDateTime deliveryTime;
 
     private LocalDateTime finishTime;
+
+    private Integer isCommented;
 }

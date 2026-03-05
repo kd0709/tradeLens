@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, onActivated, onDeactivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -125,41 +125,30 @@ import { getCategoryList } from '@/api/category'
 import { getFullImageUrl } from '@/utils/image' 
 import type { ProductQuery } from '@/dto/product'
 
+/**
+ * 性能优化核心：声明组件名称以便被 App.vue 中的 KeepAlive 识别缓存
+ * 这样从详情页返回首页时，数据和 DOM 都会保持原样，不会重新请求接口，也不会卡顿闪烁
+ */
+defineOptions({ name: 'Home' })
+
 const router = useRouter()
 const route = useRoute()
 
 const loading = ref(false)
 const productList = ref<any[]>([]) 
-const total = ref(0) // 新增：总条数
+const total = ref(0)
 const categories = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '全部' }])
 const isSticky = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
+// 记录滚动条位置的纯内存变量（性能优于 localStorage）
+const savedScrollY = ref(0)
+
 const banners = ref<any[]>([
-  { 
-    title: '数码发烧友', 
-    desc: '低价淘大牌，旧机换新颜', 
-    tag: '热门活动',
-    img: 'https://picsum.photos/800/400?random=1' 
-  },
-  { 
-    title: '校园开学季', 
-    desc: '教材、生活用品一站式购齐', 
-    tag: '限时特惠',
-    img: 'https://picsum.photos/800/400?random=2' 
-  },
-  { 
-    title: '极客装备库', 
-    desc: '显卡、外设，硬核玩家的选择', 
-    tag: '新品上架',
-    img: 'https://picsum.photos/800/400?random=3' 
-  },
-  { 
-    title: '闲置书屋', 
-    desc: '让知识流动起来', 
-    tag: '图书漂流',
-    img: 'https://picsum.photos/800/400?random=4' 
-  }
+  { title: '数码发烧友', desc: '低价淘大牌，旧机换新颜', tag: '热门活动', img: 'https://picsum.photos/800/400?random=1' },
+  { title: '校园开学季', desc: '教材、生活用品一站式购齐', tag: '限时特惠', img: 'https://picsum.photos/800/400?random=2' },
+  { title: '极客装备库', desc: '显卡、外设，硬核玩家的选择', tag: '新品上架', img: 'https://picsum.photos/800/400?random=3' },
+  { title: '闲置书屋', desc: '让知识流动起来', tag: '图书漂流', img: 'https://picsum.photos/800/400?random=4' }
 ])
 
 const queryParams = reactive<ProductQuery>({
@@ -178,12 +167,11 @@ const loadCategories = async () => {
       { id: 0, name: '全部' },
       ...catList.map((cat: any) => ({ id: cat.id, name: cat.name }))
     ]
-  } catch (error) {
-    // 加载分类失败已由 ElMessage统处理
-  }
+  } catch (error) {}
 }
 
 const loadData = async () => {
+  if (loading.value) return // 防止重复并发请求
   loading.value = true
   try {
     const params: any = {
@@ -199,7 +187,6 @@ const loadData = async () => {
     const res = await getProductList(params)
     productList.value = res.list || [] 
     total.value = Number(res.total) || 0
-    console.log('加载商品列表成功:', total.value) 
   } catch (error) {
     productList.value = []
     total.value = 0
@@ -208,10 +195,8 @@ const loadData = async () => {
   }
 }
 
-
 const handleCategoryChange = (id: number) => {
   if (queryParams.categoryId === id) return
-  
   queryParams.categoryId = id === 0 ? undefined : id
   queryParams.current = 1 
   loadData()
@@ -219,7 +204,6 @@ const handleCategoryChange = (id: number) => {
 
 const handleSortChange = (sortType: any) => {
   if (queryParams.sort === sortType) return
-
   queryParams.sort = sortType
   queryParams.current = 1 
   loadData()
@@ -269,27 +253,26 @@ const formatTime = (timeStr: string) => {
 
 const highlightKeyword = (title: string) => {
   if (!queryParams.keyword) return title
-  const reg = new RegExp(queryParams.keyword, 'gi')
+  const safeKeyword = queryParams.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const reg = new RegExp(safeKeyword, 'gi')
   return title.replace(reg, (match) => `<span style="color: #10b981; font-weight:bold">${match}</span>`)
 }
 
 watch(() => route.query.q, (newVal) => {
   queryParams.keyword = (newVal as string) || ''
-  queryParams.current = 1 // 搜索时重置为第一页
+  queryParams.current = 1 
   loadData()
 })
 
+/**
+ * 首次进入页面执行数据初始化
+ */
 onMounted(async () => {
   if (route.query.from === 'alipay') {
     ElMessage.success('支付成功')
-
     const newQuery = { ...route.query }
     delete newQuery.from
-
-    router.replace({
-      path: '/',
-      query: newQuery
-    })
+    router.replace({ path: '/', query: newQuery })
   }
 
   if (route.query.q) {
@@ -297,7 +280,23 @@ onMounted(async () => {
   }
 
   await loadCategories()
-  loadData()
+  await loadData()
+})
+
+/**
+ * KeepAlive 生命周期钩子：从详情页返回时触发
+ */
+onActivated(() => {
+  // 恢复之前记录的滚动位置，使用 behavior: instant 确保瞬间恢复不卡顿
+  window.scrollTo({ top: savedScrollY.value, behavior: 'instant' })
+})
+
+/**
+ * KeepAlive 生命周期钩子：进入详情页时触发
+ */
+onDeactivated(() => {
+  // 记录当前的滚动条坐标
+  savedScrollY.value = window.scrollY
 })
 </script>
 
@@ -328,6 +327,11 @@ onMounted(async () => {
     filter: blur(60px);
     opacity: 0.6;
     z-index: 0;
+    
+    // 性能优化：开启 GPU 渲染，避免模糊背景拖慢滚动
+    pointer-events: none;
+    transform: translateZ(0); 
+    will-change: transform;
     
     &.left { background: #10b981; top: -100px; left: -100px; }
     &.right { background: #34d399; bottom: -50px; right: -100px; }
@@ -370,7 +374,6 @@ onMounted(async () => {
   }
 }
 
-/* 2. 工具栏样式 (保持不变) */
 .toolbar-section {
   position: sticky; top: 64px; z-index: 10;
   background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px);
@@ -415,10 +418,9 @@ onMounted(async () => {
   }
 }
 
-/* 3. 商品网格样式 (保持不变) */
 .product-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 24px; padding-bottom: 20px; min-height: 300px; // 防止加载时高度塌陷
+  gap: 24px; padding-bottom: 20px; min-height: 300px;
 }
 
 .product-card {
@@ -433,7 +435,11 @@ onMounted(async () => {
 
   .image-wrapper {
     position: relative; aspect-ratio: 1; background: #f3f4f6; overflow: hidden;
-    img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+    img { 
+      width: 100%; height: 100%; object-fit: cover; 
+      transition: transform 0.3s ease; 
+      will-change: transform;
+    }
     &:hover img { transform: scale(1.05); }
     .condition-tag {
       position: absolute; top: 12px; left: 12px;
@@ -462,14 +468,12 @@ onMounted(async () => {
   }
 }
 
-/* 4. 分页区域样式 */
 .pagination-section {
   display: flex;
   justify-content: center;
   padding: 40px 0 60px;
   
   :deep(.custom-pagination) {
-    /* 自定义 Element Plus 分页样式微调 */
     .el-pagination__total { margin-right: 16px; color: #6b7280; }
     .el-pager li {
       background: #fff; border: 1px solid #e5e7eb; font-weight: 500;

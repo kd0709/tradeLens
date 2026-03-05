@@ -13,7 +13,7 @@ public class ProductMyDto {
     private Integer productStatus;
     private String mainImage;  // 主图 URL
 
-
+    private Integer quantity;
     private LocalDateTime createTime;
 }
 

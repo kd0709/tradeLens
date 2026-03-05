@@ -1,5 +1,5 @@
 export interface AddressDto {
-  id?: number
+  id: number
   receiverName: string
   receiverPhone: string
   province: string

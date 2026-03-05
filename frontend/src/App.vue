@@ -9,9 +9,13 @@ const route = useRoute()
 <template>
   <NavBar v-if="route.name !== 'login'" />
   
-  <Transition name="zoom-fade" mode="out-in">
-    <RouterView />
-  </Transition>
+  <RouterView v-slot="{ Component }">
+    <Transition name="zoom-fade" mode="out-in">
+      <keep-alive include="Home">
+        <component :is="Component" :key="route.fullPath" />
+      </keep-alive>
+    </Transition>
+  </RouterView>
 </template>
 
 <style>
@@ -88,4 +92,3 @@ a { text-decoration: none; }
   50% { transform: translate3d(0, -2px, 0) scale(1.02); }
   100% { transform: translateZ(0); }
 }
-</style>

@@ -21,9 +21,6 @@ public class ProductController {
 
     private final ProductService productService;
 
-    /**
-     * 发布商品
-     */
     @PostMapping("/publish")
     public Result<Long> publishProduct(
             @RequestBody @Valid ProductPublishDto req,
@@ -42,10 +39,6 @@ public class ProductController {
         }
     }
 
-
-    /**
-     * 修改商品状态（上架/下架等）
-     */
     @PutMapping("/status")
     public Result<Void> updateProductStatus(
             @RequestBody @Valid ProductStatusUpdateDto req,
@@ -69,9 +62,6 @@ public class ProductController {
         }
     }
 
-    /**
-     * 删除商品（逻辑删除）
-     */
     @DeleteMapping("/{id}")
     public Result<Void> deleteProduct(
             @PathVariable("id") Long productId,
@@ -90,9 +80,6 @@ public class ProductController {
         }
     }
 
-    /**
-     * 查询我发布的商品列表
-     */
     @GetMapping("/my")
     public Result<PageDto<ProductMyDto>> listMyProducts(
             @RequestParam(defaultValue = "1") Integer current,
@@ -111,9 +98,6 @@ public class ProductController {
         }
     }
 
-    /**
-     * 商品搜索列表（买家浏览核心接口）
-     */
     @GetMapping("/list")
     public Result<PageDto<ProductListDto>> listProducts(
             @RequestParam(defaultValue = "1") Integer current,
@@ -138,9 +122,6 @@ public class ProductController {
         }
     }
 
-    /**
-     * 获取商品详情
-     */
     @GetMapping("/{id}")
     public Result<ProductDetailDto> getProductDetail(
             @PathVariable("id") Long productId,
@@ -161,9 +142,6 @@ public class ProductController {
         }
     }
 
-    /**
-     * 编辑商品
-     */
     @PutMapping
     public Result<Void> updateProduct(
             @RequestBody @Valid ProductUpdateDto req,

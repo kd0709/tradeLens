@@ -73,9 +73,6 @@ const router = useRouter()
 const order = ref<OrderDto | null>(null)
 const paying = ref(false)
 
-/**
- * 加载订单
- */
 const loadOrder = async () => {
   const orderNo = route.params.id as string
   if (!orderNo) {
@@ -93,13 +90,11 @@ const loadOrder = async () => {
       return
     }
 
-    // ✅ 已支付直接跳首页并提示成功
     if (order.value.status === 2) {
       router.replace('/?paySuccess=true')
       return
     }
 
-    // 非待支付状态
     if (order.value.status !== 1) {
       ElMessage.warning('该订单无需支付')
       router.replace('/user')
@@ -112,9 +107,6 @@ const loadOrder = async () => {
   }
 }
 
-/**
- * 拉起支付宝
- */
 const handleConfirmPay = async () => {
   if (!order.value || order.value.status !== 1) return
 

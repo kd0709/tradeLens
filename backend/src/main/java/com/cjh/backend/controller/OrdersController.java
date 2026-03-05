@@ -24,16 +24,12 @@ public class OrdersController {
 
     private final OrdersService orderService;
 
-    /**
-     * 创建订单
-     */
     @PostMapping("/create")
     public Result<OrderDetailDto> createOrder(
             @CurrentUser Long userId,
             @Valid @RequestBody CreateOrderDto dto) {
 
-        // 💡 修正日志打印：DTO 现在包含的是 items 列表而非单个 ID
-        log.info("用户 {} 发起下单请求，包含商品种类数: {}, 地址ID: {}, 来源购物车数: {}",
+        log.info("用户 {} 发起下单请求，包含商品种类数：{}, 地址 ID: {}, 来源购物车数：{}",
                 userId,
                 dto.getItems() != null ? dto.getItems().size() : 0,
                 dto.getAddressId(),
@@ -41,22 +37,17 @@ public class OrdersController {
 
         try {
             OrderDetailDto result = orderService.createOrder(userId, dto);
-            log.info("用户 {} 创建订单成功，订单号: {}", userId, result.getOrderNo());
+            log.info("用户 {} 创建订单成功，订单号：{}", userId, result.getOrderNo());
             return Result.success(result);
         } catch (RuntimeException e) {
-            // 业务异常（如：商品不存在、库存不足）
-            log.warn("用户 {} 下单业务校验未通过: {}", userId, e.getMessage());
+            log.warn("用户 {} 下单业务校验未通过：{}", userId, e.getMessage());
             return Result.fail(e.getMessage());
         } catch (Exception e) {
-            // 系统级异常
             log.error("用户 {} 创建订单发生系统异常", userId, e);
             return Result.fail("系统繁忙，请稍后再试");
         }
     }
 
-    /**
-     * 买家订单列表
-     */
     @GetMapping("/buyer/list")
     public Result<com.cjh.backend.dto.PageDto<OrderListDto>> listBuyerOrders(
             @CurrentUser Long userId,

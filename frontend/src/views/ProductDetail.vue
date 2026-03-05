@@ -129,7 +129,7 @@ import type { FavoriteToggleDto } from '@/dto/favorite'
 
 const route = useRoute()
 const router = useRouter()
-const loading = ref(false)
+const loading = ref(true)
 const product = ref<ProductDto | null>(null)
 const currentImage = ref('')
 const isLiked = ref(false)

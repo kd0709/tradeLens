@@ -39,7 +39,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         }
 
         Long existId = commentMapper.selectIdByOrderId(dto.getOrderId());
-        if (existId != null) {
+        if (existId != null || (order.getIsCommented() != null && order.getIsCommented() == 1)) {
             throw new RuntimeException("该订单已评价，请勿重复提交");
         }
 
@@ -49,6 +49,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         }
         Long productId = items.get(0).getProductId();
 
+        // 1. 插入评价记录
         Comment comment = new Comment();
         BeanUtils.copyProperties(dto, comment);
         comment.setUserId(userId);
@@ -59,6 +60,10 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         if (rows == 0) {
             throw new IllegalStateException("发表评价失败");
         }
+
+        // 2. 更新订单表的是否评价状态 (这里是修改的重点！)
+        order.setIsCommented(1);
+        ordersMapper.updateById(order);
     }
 
     @Override

@@ -108,7 +108,10 @@
                         <el-button v-if="order.status === 1" type="primary" round size="small" @click="handlePay(order)">去支付</el-button>
                         <el-button v-if="order.status === 3" type="success" round size="small" @click="handleReceive(order)">确认收货</el-button>
                         <el-button v-if="[1,2].includes(order.status)" round size="small" @click="handleCancel(order)">取消订单</el-button>
-                        <el-button v-if="order.status === 4" round size="small" @click="openCommentDialog(order)">评价</el-button>
+                        
+                        <el-button v-if="order.status === 4 && order.isCommented !== 1" round size="small" @click="openCommentDialog(order)">评价</el-button>
+                        <el-button v-else-if="order.status === 4 && order.isCommented === 1" disabled round size="small">已评价</el-button>
+                        
                         <el-button v-if="[4,5].includes(order.status)" text size="small">删除记录</el-button>
                       </div>
                     </div>
@@ -157,12 +160,17 @@
                     <div class="image-area" @click="router.push(`/product/${prod.id}`)">
                       <el-image :src="getFullImageUrl(prod.mainImage)" fit="cover" loading="lazy" />
                       <div class="status-overlay" v-if="prod.productStatus !== 2">
-                        {{ prod.productStatus === 4 ? '已售出' : '已下架' }}
+                        {{ prod.productStatus === 4 ? '已售空' : '已下架' }}
                       </div>
                     </div>
                     <div class="info-area">
                       <div class="title" :title="prod.title">{{ prod.title }}</div>
                       <div class="price">¥ {{ prod.price }}</div>
+                      
+                      <div class="stock" style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">
+                        库存余量：{{ prod.quantity }} 件
+                      </div>
+
                       <div class="actions">
                         <el-button 
                           size="small" 
@@ -174,6 +182,26 @@
                         </el-button>
                         <el-divider direction="vertical" />
                         <el-button size="small" type="danger" link @click="handleDeleteProduct(prod.id)">删除</el-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="我的收藏" name="favorites">
+              <div class="tab-content-wrapper">
+                <el-empty v-if="favoriteList.length === 0" description="暂无收藏记录" />
+                <div class="product-grid" v-else>
+                  <div v-for="fav in favoriteList" :key="fav.id || fav.productId" class="manage-product-card">
+                    <div class="image-area" @click="router.push(`/product/${fav.productId}`)">
+                      <el-image :src="getFullImageUrl(fav.imageUrl)" fit="cover" loading="lazy" />
+                    </div>
+                    <div class="info-area">
+                      <div class="title" :title="fav.title">{{ fav.title }}</div>
+                      <div class="price">¥ {{ fav.price }}</div>
+                      <div class="actions">
+                        <el-button size="small" type="danger" link @click="handleRemoveFavorite(fav.productId)">取消收藏</el-button>
                       </div>
                     </div>
                   </div>
@@ -288,14 +316,30 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="commentDialogVisible" title="评价商品" width="500px">
-      <el-form :model="commentForm" label-width="60px">
-        <el-form-item label="评分"><el-rate v-model="commentForm.score" /></el-form-item>
-        <el-form-item label="心得"><el-input v-model="commentForm.content" type="textarea" :rows="3" /></el-form-item>
+    <el-dialog v-model="commentDialogVisible" title="评价商品" width="500px" @closed="handleCommentDialogClosed">
+      <el-form 
+        ref="commentFormRef" 
+        :model="commentForm" 
+        :rules="commentRules" 
+        label-width="60px"
+      >
+        <el-form-item label="评分" prop="score">
+          <el-rate v-model="commentForm.score" show-text />
+        </el-form-item>
+        <el-form-item label="心得" prop="content">
+          <el-input 
+            v-model="commentForm.content" 
+            type="textarea" 
+            :rows="4" 
+            maxlength="200"
+            show-word-limit
+            placeholder="分享你的购买心得，帮助更多买家了解商品~" 
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="commentDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitComment">提交评价</el-button>
+        <el-button type="primary" :loading="submittingComment" @click="submitComment">提交评价</el-button>
       </template>
     </el-dialog>
   </div>
@@ -309,6 +353,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Location, Money, Goods, Wallet } from '@element-plus/icons-vue' 
 import { getFullImageUrl } from '@/utils/image'
 import * as echarts from 'echarts'
+import type { FormInstance, FormRules } from 'element-plus'
 
 // API
 import { getBuyerOrders, getSellerOrders, deliverOrder, confirmOrder, cancelOrder } from '@/api/order'
@@ -318,6 +363,7 @@ import { getSalesStatistics } from '@/api/statistics'
 import { publishComment } from '@/api/comment'
 import { updateUserInfo } from '@/api/user'
 import { uploadFile } from '@/api/common'
+import { getFavoriteList, toggleFavorite } from '@/api/favorite' // 新增收藏相关 API
 
 // DTO
 import type { OrderDto } from '@/dto/order'
@@ -326,6 +372,7 @@ import type { AddressDto, AddressUpdateDto } from '@/dto/address'
 import type { ProductMyDto } from '@/dto/product'
 import type { CommentPublishDto } from '@/dto/comment'
 import type { UploadRequestOptions } from 'element-plus'
+import type { FavoriteListDto } from '@/dto/favorite'
 
 // 状态
 const router = useRouter()
@@ -333,12 +380,23 @@ const authStore = useAuthStore()
 const activeTab = ref('profile')
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 const loading = ref(false)
+const submittingComment = ref(false)
 
 // 数据列表
 const buyerOrders = ref<OrderDto[]>([])
 const sellerOrders = ref<OrderDto[]>([])
 const myProducts = ref<ProductMyDto[]>([])
 const addressList = ref<AddressDto[]>([])
+const favoriteList = ref<FavoriteListDto[]>([]) // 新增收藏列表状态
+const commentFormRef = ref<FormInstance>()
+const commentRules = reactive<FormRules>({
+  score: [{ required: true, message: '请给商品打分', trigger: 'change' }],
+  content: [
+    { required: true, message: '请填写评价心得', trigger: 'blur' },
+    { min: 5, max: 200, message: '评价内容需在 5 到 200 个字符之间', trigger: 'blur' }
+  ]
+})
+
 
 // 统计变量 
 const trendChartRef = ref<HTMLElement | null>(null)
@@ -383,9 +441,7 @@ const initUserInfo = () => {
     userInfoForm.email = authStore.user.email || ''
   }
 }
-
 watch(() => authStore.user, () => { initUserInfo() }, { immediate: true })
-
 const handleUpdateProfile = async () => {
   if (!userInfoForm.nickname) return ElMessage.warning('昵称不能为空')
   loading.value = true
@@ -495,17 +551,20 @@ const fetchStatistics = async () => {
 // --- 3. 数据加载与生命周期 ---
 const loadData = async () => {
   try {
-    const [res1, res2, res3, resAddr] = await Promise.all([
-      getBuyerOrders({ current: 1, size: 20 }),
-      getSellerOrders({ current: 1, size: 20 }),
-      getMyProducts({ current: 1, size: 20 }),
-      getMyAddressList(),
-      fetchStatistics() // 并在加载时获取统计数据
+    // 加上 .catch 防止某一个接口挂掉导致整个个人中心空白
+    const [res1, res2, res3, resAddr, resFav] = await Promise.all([
+      getBuyerOrders({ current: 1, size: 20 }).catch(() => ({ list: [] })),
+      getSellerOrders({ current: 1, size: 20 }).catch(() => ({ list: [] })),
+      getMyProducts({ current: 1, size: 20 }).catch(() => []),
+      getMyAddressList().catch(() => []),
+      getFavoriteList().catch(() => ({ list: [] })), // 获取收藏列表
+      fetchStatistics().catch(() => null) 
     ])
     buyerOrders.value = (res1 as any)?.list || []
     sellerOrders.value = (res2 as any)?.list || []
     myProducts.value = (res3 as any)?.list || (Array.isArray(res3) ? res3 : [])
     addressList.value = Array.isArray(resAddr) ? resAddr : (resAddr as any)?.list || []
+    favoriteList.value = (resFav as any)?.list || (Array.isArray(resFav) ? resFav : [])
   } catch (error) { console.error(error) }
 }
 
@@ -552,14 +611,41 @@ const handleCancel = async (o: OrderDto) => {
 
 const openCommentDialog = (o: OrderDto) => { 
   commentForm.orderId = o.id; 
+  commentForm.score = 5;      // 重置默认评分
+  commentForm.content = '';   // 重置内容
   commentDialogVisible.value = true 
 }
+
 const submitComment = async () => { 
-  await publishComment(commentForm); 
-  commentDialogVisible.value = false; 
-  loadData() 
+  if (!commentFormRef.value) return
+  await commentFormRef.value.validate(async (valid) => {
+    if (valid) {
+      submittingComment.value = true
+      try {
+        await publishComment(commentForm)
+        ElMessage.success('评价提交成功！')
+        commentDialogVisible.value = false
+        
+        // 乐观更新：立刻在当前列表将该订单标记为已评价，修改为 1
+        const currentOrder = buyerOrders.value.find(o => o.id === commentForm.orderId)
+        if (currentOrder) {
+          currentOrder.isCommented = 1
+        }
+
+      } catch (error) {
+        // 请求拦截器已处理错误提示，此处忽略
+      } finally {
+        submittingComment.value = false
+      }
+    }
+  })
 }
 
+const handleCommentDialogClosed = () => {
+  if (commentFormRef.value) {
+    commentFormRef.value.clearValidate()
+  }
+}
 const openAddressDialog = (row?: AddressDto) => {
   isEditAddress.value = !!row
   Object.assign(addressForm, row || { id: undefined, receiverName: '', receiverPhone: '', province: '', city: '', district: '', detailAddress: '', isDefault: 0 })
@@ -585,6 +671,16 @@ const handleToggleStatus = async (prod: any) => {
 }
 const handleDeleteProduct = async (id: number) => {
   try { await ElMessageBox.confirm('确定删除吗？'); await deleteProduct(id); loadData() } catch (e) {}
+}
+
+// 取消收藏处理
+const handleRemoveFavorite = async (productId: number) => {
+  try {
+    await ElMessageBox.confirm('确定取消收藏该商品吗？', '提示', { type: 'warning' })
+    await toggleFavorite({ productId }) // 假设接口通过 toggleFavorite 控制添加/取消
+    ElMessage.success('已取消收藏')
+    loadData()
+  } catch (e) {}
 }
 
 watch(activeTab, (newVal) => {
@@ -784,7 +880,8 @@ onUnmounted(() => {
 .fade-down-enter-active, .fade-up-enter-active { transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .fade-down-enter-from { opacity: 0; transform: translateY(-30px); }
 .fade-up-enter-from { opacity: 0; transform: translateY(30px); }
-/* --- 【新增】销售统计模块样式 --- */
+
+/* --- 销售统计模块样式 --- */
 .stats-wrapper {
   padding: 0 10px;
 
@@ -856,5 +953,4 @@ onUnmounted(() => {
     .charts-grid { grid-template-columns: 1fr; }
   }
 }
-
 </style>

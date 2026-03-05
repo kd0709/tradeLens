@@ -23,9 +23,6 @@ public class AuthController {
     private final AuthService authService;
     private final TokenBlacklist tokenBlacklist;
 
-    /**
-     * 注册
-     */
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
         log.info("用户 {} 注册", registerRequest.getUsername());
@@ -34,30 +31,24 @@ public class AuthController {
             log.info("注册成功");
             return Result.success("注册成功");
         } catch (Exception e) {
-            log.info("注册失败" ,e);
+            log.info("注册失败", e);
             return Result.fail("注册失败");
         }
     }
 
-    /**
-     * 登录
-     */
     @PostMapping("/login")
     public Result<UserInfoDto> login(@Valid @RequestBody LoginRequest loginRequest) {
         log.info("用户 {} 登录", loginRequest.getUsername());
         try {
             UserInfoDto userInfoDto = authService.login(loginRequest);
             log.info("登录成功");
-            return Result.success(userInfoDto,"登陆成功");
+            return Result.success(userInfoDto, "登陆成功");
         } catch (Exception e) {
             log.error("用户登陆失败", e);
             return Result.fail("登陆失败");
         }
     }
 
-    /**
-     * 登出
-     */
     @PostMapping("/logout")
     public Result<Void> logout() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
