@@ -20,6 +20,8 @@ import com.cjh.backend.mapper.*;
 import com.cjh.backend.service.OrdersService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -42,6 +45,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
     private final AddressMapper addressMapper;
     private final AlipayClient alipayClient;
     private final AlipayConfig alipayConfig;
+
+    // 注入 Redisson 客户端
+    private final RedissonClient redissonClient;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -65,50 +71,72 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         Set<Long> sellerIds = new HashSet<>();
 
         for (CreateOrderDto.OrderItemRequest itemReq : dto.getItems()) {
-            Product product = productMapper.selectById(itemReq.getProductId());
-            if (product == null || product.getProductStatus() != 2) {
-                throw new RuntimeException("商品 " + (product != null ? product.getTitle() : "") + "已失效");
+            // 定义针对单个商品的分布式锁 Key
+            String lockKey = "lock:product:stock:" + itemReq.getProductId();
+            RLock lock = redissonClient.getLock(lockKey);
+
+            try {
+                // 尝试获取锁：最多等待3秒，上锁后10秒自动解锁
+                boolean isLocked = lock.tryLock(3, 10, TimeUnit.SECONDS);
+                if (!isLocked) {
+                    throw new RuntimeException("系统繁忙，商品抢购人数过多，请稍后重试");
+                }
+
+                Product product = productMapper.selectById(itemReq.getProductId());
+                if (product == null || product.getProductStatus() != 2) {
+                    throw new RuntimeException("商品 " + (product != null ? product.getTitle() : "") + "已失效");
+                }
+
+                if (product.getUserId().equals(userId)) {
+                    throw new RuntimeException("不能购买自己发布的商品");
+                }
+
+                if (!sellerIds.isEmpty() && !sellerIds.contains(product.getUserId())) {
+                    throw new RuntimeException("不允许跨卖家合并结算，请选择同一卖家的商品进行结算");
+                }
+                sellerIds.add(product.getUserId());
+
+                // 分布式锁内查库存
+                Integer stock = productMapper.checkProductStock(itemReq.getProductId());
+                if (stock == null || stock < itemReq.getQuantity()) {
+                    throw new RuntimeException("商品 " + product.getTitle() + " 库存不足，当前库存: " + stock);
+                }
+
+                int affectedRows = productMapper.decreaseProductQuantity(itemReq.getProductId(), itemReq.getQuantity());
+                if (affectedRows == 0) {
+                    throw new RuntimeException("商品 " + product.getTitle() + " 扣减库存失败，请重试");
+                }
+
+                Integer remainingStock = productMapper.checkProductStock(itemReq.getProductId());
+                if (remainingStock != null && remainingStock <= 0) {
+                    Product pToUpdate = new Product();
+                    pToUpdate.setId(itemReq.getProductId());
+                    pToUpdate.setProductStatus(4);
+                    productMapper.updateById(pToUpdate);
+                }
+
+                BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+                totalAmount = totalAmount.add(itemTotal);
+
+                OrderItem item = new OrderItem();
+                item.setProductId(product.getId());
+                item.setProductTitle(product.getTitle());
+                item.setPrice(product.getPrice());
+                item.setQuantity(itemReq.getQuantity());
+                item.setCreateTime(LocalDateTime.now());
+                orderItems.add(item);
+
+                if (order.getSellerId() == null) order.setSellerId(product.getUserId());
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("抢购请求被中断");
+            } finally {
+                // 释放锁
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
             }
-
-            if (product.getUserId().equals(userId)) {
-                throw new RuntimeException("不能购买自己发布的商品");
-            }
-
-            if (!sellerIds.isEmpty() && !sellerIds.contains(product.getUserId())) {
-                throw new RuntimeException("不允许跨卖家合并结算，请选择同一卖家的商品进行结算");
-            }
-            sellerIds.add(product.getUserId());
-
-            Integer stock = productMapper.checkProductStock(itemReq.getProductId());
-            if (stock == null || stock < itemReq.getQuantity()) {
-                throw new RuntimeException("商品 " + product.getTitle() + "库存不足");
-            }
-
-            int affectedRows = productMapper.decreaseProductQuantity(itemReq.getProductId(), itemReq.getQuantity());
-            if (affectedRows == 0) {
-                throw new RuntimeException("商品 " + product.getTitle() + "库存扣减失败，请重试");
-            }
-
-            Integer remainingStock = productMapper.checkProductStock(itemReq.getProductId());
-            if (remainingStock != null && remainingStock <= 0) {
-                Product pToUpdate = new Product();
-                pToUpdate.setId(itemReq.getProductId());
-                pToUpdate.setProductStatus(4);
-                productMapper.updateById(pToUpdate);
-            }
-
-            BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
-            totalAmount = totalAmount.add(itemTotal);
-
-            OrderItem item = new OrderItem();
-            item.setProductId(product.getId());
-            item.setProductTitle(product.getTitle());
-            item.setPrice(product.getPrice());
-            item.setQuantity(itemReq.getQuantity());
-            item.setCreateTime(LocalDateTime.now());
-            orderItems.add(item);
-
-            if (order.getSellerId() == null) order.setSellerId(product.getUserId());
         }
 
         order.setTotalPrice(totalAmount);
@@ -186,7 +214,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         }
 
         if (order.getStatus() == 2) {
-            // 补充真实退款逻辑
             try {
                 AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
                 JSONObject bizContent = new JSONObject();
@@ -222,8 +249,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         order.setStatus(4);
         order.setFinishTime(LocalDateTime.now());
-
-        // 删除了原有的异常且冗余的商品库存检测逻辑，确认收货不应改变商品上下架状态
 
         int rows = ordersMapper.updateById(order);
         if (rows == 0) {
