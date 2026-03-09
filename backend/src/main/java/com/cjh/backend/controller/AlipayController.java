@@ -1,11 +1,13 @@
 package com.cjh.backend.controller;
 
+import com.alibaba.fastjson2.JSONObject;
+import com.alipay.api.AlipayApiException;
+import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
+import com.alipay.api.request.AlipayTradeRefundRequest;
 import com.cjh.backend.config.AlipayConfig;
 import com.cjh.backend.entity.Orders;
 import com.cjh.backend.mapper.OrdersMapper;
-import com.cjh.backend.mapper.OrderItemMapper;
-import com.cjh.backend.mapper.ProductMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,23 +28,19 @@ public class AlipayController {
 
     private final AlipayConfig alipayConfig;
     private final OrdersMapper ordersMapper;
-    private final OrderItemMapper orderItemMapper;
-    private final ProductMapper productMapper;
+    private final AlipayClient alipayClient;
 
     @PostMapping("/notify")
     public String handleNotify(HttpServletRequest request) {
         log.info("📢 收到支付宝异步回调通知...");
         try {
-            // 1. 获取支付宝回调参数
             Map<String, String> params = new HashMap<>();
             Map<String, String[]> requestParams = request.getParameterMap();
 
             for (String name : requestParams.keySet()) {
                 params.put(name, request.getParameter(name));
             }
-            log.info("回调参数: {}", params);
 
-            // 2. 验证签名
             boolean verifyResult = AlipaySignature.rsaCheckV1(
                     params,
                     alipayConfig.getAlipayPublicKey(),
@@ -51,28 +49,22 @@ public class AlipayController {
             );
 
             if (!verifyResult) {
-                log.error("❌ 支付宝回调签名验证失败！请检查 alipayPublicKey 是否为支付宝公钥（非应用公钥）");
+                log.error("❌ 支付宝回调签名验证失败！");
                 return "fail";
             }
-            log.info("✅ 签名验证通过");
 
-            // 3. 判断交易状态
             String tradeStatus = params.get("trade_status");
-            log.info("交易状态: {}", tradeStatus);
             if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
-                return "success"; // 非成功状态也需返回success给支付宝，避免重复通知
+                return "success";
             }
 
-            // 4. 校验 appId
             if (!alipayConfig.getAppId().equals(params.get("app_id"))) {
-                log.error("❌ 支付宝回调appId不匹配！接收到的appId: {}", params.get("app_id"));
+                log.error("❌ 支付宝回调appId不匹配！");
                 return "fail";
             }
 
-            // 5. 获取订单号和金额
             String orderNo = params.get("out_trade_no");
             String totalAmount = params.get("total_amount");
-
             Orders order = ordersMapper.selectByOrderNo(orderNo);
 
             if (order == null) {
@@ -80,34 +72,50 @@ public class AlipayController {
                 return "fail";
             }
 
-            // 6. 校验金额
             BigDecimal payAmount = new BigDecimal(totalAmount);
             if (order.getTotalPrice().compareTo(payAmount) != 0) {
-                log.error("❌ 支付宝回调金额校验失败！系统订单金额：{}， 实际支付金额：{}", order.getTotalPrice(), payAmount);
+                log.error("❌ 支付宝回调金额校验失败！");
                 return "fail";
             }
-            log.info("✅ 金额校验通过");
 
-            // 7. 幂等处理（已支付直接返回 success）
+            // 幂等与并发处理
             if (order.getStatus() != 1) {
                 log.info("⚠️ 订单 {} 状态已被处理过，当前状态: {}", orderNo, order.getStatus());
+
+                // 解决并发漏洞：如果订单超时被定时任务取消了，但用户实际支付成功了，必须发起退款
+                if (order.getStatus() == 5) {
+                    log.warn("⚠️ 订单 {} 已超时取消但用户支付成功，触发自动退款", orderNo);
+                    autoRefund(orderNo, totalAmount);
+                }
                 return "success";
             }
 
-            // 8. 更新订单状态（库存已在下单时预扣减）
             order.setStatus(2); // 2 =已支付待发货
             order.setPayTime(LocalDateTime.now());
-            // 记录支付宝交易流水号，方便后续退款对账
             order.setTrackingNo(params.get("trade_no"));
-
             ordersMapper.updateById(order);
-            log.info("🎉 订单 {} 支付处理完毕，状态成功更新为已支付！", orderNo);
 
+            log.info("🎉 订单 {} 支付处理完毕！", orderNo);
             return "success";
 
         } catch (Exception e) {
             log.error("❌ 处理支付宝回调发生系统异常", e);
             return "fail";
+        }
+    }
+
+    private void autoRefund(String orderNo, String amount) {
+        try {
+            AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
+            JSONObject bizContent = new JSONObject();
+            bizContent.put("out_trade_no", orderNo);
+            bizContent.put("refund_amount", amount);
+            bizContent.put("refund_reason", "订单超时关闭自动退款");
+            request.setBizContent(bizContent.toString());
+            alipayClient.execute(request);
+            log.info("✅ 订单 {} 自动退款调用成功", orderNo);
+        } catch (AlipayApiException e) {
+            log.error("❌ 订单 {} 自动退款失败，需人工介入", orderNo, e);
         }
     }
 }

@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.request.AlipayTradePagePayRequest;
+import com.alipay.api.request.AlipayTradeRefundRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -28,12 +29,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
-    implements OrdersService{
+        implements OrdersService{
 
     private final OrdersMapper ordersMapper;
     private final OrderItemMapper orderItemMapper;
@@ -62,48 +62,44 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
-        Set<Long> sellerIds = new HashSet<>(); // 用于检查是否跨卖家
-        
+        Set<Long> sellerIds = new HashSet<>();
+
         for (CreateOrderDto.OrderItemRequest itemReq : dto.getItems()) {
             Product product = productMapper.selectById(itemReq.getProductId());
             if (product == null || product.getProductStatus() != 2) {
                 throw new RuntimeException("商品 " + (product != null ? product.getTitle() : "") + "已失效");
             }
-            
-            //检查买家不能购买自己发布的商品
+
             if (product.getUserId().equals(userId)) {
                 throw new RuntimeException("不能购买自己发布的商品");
             }
-        
-            //检查是否跨卖家
+
             if (!sellerIds.isEmpty() && !sellerIds.contains(product.getUserId())) {
                 throw new RuntimeException("不允许跨卖家合并结算，请选择同一卖家的商品进行结算");
             }
             sellerIds.add(product.getUserId());
-        
-            //检查库存是否充足并预扣库存
+
             Integer stock = productMapper.checkProductStock(itemReq.getProductId());
             if (stock == null || stock < itemReq.getQuantity()) {
-                throw new RuntimeException("商品 " + product.getTitle() + "库不足，当前库存: " + stock + ", 请求数量: " + itemReq.getQuantity());
+                throw new RuntimeException("商品 " + product.getTitle() + "库存不足");
             }
-                        
-            //库存（防止并发超卖）
+
             int affectedRows = productMapper.decreaseProductQuantity(itemReq.getProductId(), itemReq.getQuantity());
             if (affectedRows == 0) {
-                throw new RuntimeException("商品 " + product.getTitle() + "库扣减失败，请重试");
+                throw new RuntimeException("商品 " + product.getTitle() + "库存扣减失败，请重试");
             }
-            //新增逻辑开始：扣减后立即检查库存，若售空则马上标记为4(已售空)
+
             Integer remainingStock = productMapper.checkProductStock(itemReq.getProductId());
             if (remainingStock != null && remainingStock <= 0) {
                 Product pToUpdate = new Product();
                 pToUpdate.setId(itemReq.getProductId());
-                pToUpdate.setProductStatus(4); // 4 = 已售空
+                pToUpdate.setProductStatus(4);
                 productMapper.updateById(pToUpdate);
             }
-        
+
             BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(itemTotal);
-        
+
             OrderItem item = new OrderItem();
             item.setProductId(product.getId());
             item.setProductTitle(product.getTitle());
@@ -111,7 +107,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
             item.setQuantity(itemReq.getQuantity());
             item.setCreateTime(LocalDateTime.now());
             orderItems.add(item);
-        
+
             if (order.getSellerId() == null) order.setSellerId(product.getUserId());
         }
 
@@ -172,35 +168,38 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         if (order == null || !order.getBuyerId().equals(userId)) {
             throw new RuntimeException("订单不存在或无权限");
         }
-        // 检查订单状态是否允许取消
         if (order.getStatus() != 1 && order.getStatus() != 2) {
             throw new RuntimeException("订单状态不允许取消");
         }
-        
-        //回滚库存（无论订单状态是待支付还是已支付）
+
         List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
         for (OrderItem item : orderItems) {
-            //回滚库存
             productMapper.increaseProductQuantity(item.getProductId(), item.getQuantity());
-                            
-            // 如果商品状态已经是已售(4)，需要将其改回上架(2)
             Product product = productMapper.selectById(item.getProductId());
-            if (product != null && product.getProductStatus() == 4) { // 4 =已售
-                //检查是否还有其他已支付的订单使用该商品
-                // 如果没有其他已支付订单占用库存，则可以恢复为上架状态
+            if (product != null && product.getProductStatus() == 4) {
                 int paidOrderItemCount = ordersMapper.countPaidOrdersByProductId(item.getProductId());
                 if (paidOrderItemCount == 0) {
-                    product.setProductStatus(2); // 2 = 上架
+                    product.setProductStatus(2);
                     productMapper.updateById(product);
                 }
             }
         }
-                
-        // 如果是已支付订单，需要处理退款
-        if (order.getStatus() == 2) {  //已支付状态
-            // alipayClient.execute(refundRequest);
-            //暂记录日志，实际项目中需要接入支付宝退款 API
-            log.info("订单 {}已支付，需要执行退款操作", orderNo);
+
+        if (order.getStatus() == 2) {
+            // 补充真实退款逻辑
+            try {
+                AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
+                JSONObject bizContent = new JSONObject();
+                bizContent.put("out_trade_no", orderNo);
+                bizContent.put("refund_amount", order.getTotalPrice());
+                bizContent.put("refund_reason", "用户主动取消订单");
+                request.setBizContent(bizContent.toString());
+                alipayClient.execute(request);
+                log.info("订单 {} 已触发支付宝退款", orderNo);
+            } catch (AlipayApiException e) {
+                log.error("订单 {} 退款失败", orderNo, e);
+                throw new RuntimeException("第三方退款调用失败，请稍后重试");
+            }
         }
 
         order.setStatus(5);
@@ -223,29 +222,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         order.setStatus(4);
         order.setFinishTime(LocalDateTime.now());
-        
-        //更新订单相关商品状态（根据库存判断）
-        List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
-        for (OrderItem item : orderItems) {
-            Product product = productMapper.selectById(item.getProductId());
-            if (product != null) {
-                //检查商品是否还有库存
-                Integer currentStock = productMapper.checkProductStock(item.getProductId());
-                if (currentStock == null || currentStock <= 0) {
-                    //没有库存了，标记为已售
-                    product.setProductStatus(4); // 4 =已售
-                } else {
-                    //还有库存，但只在商品当前为"已售"状态时才改回上架
-                    //避免覆盖卖家手动设置的下架状态
-                    if (product.getProductStatus() == 4) { //只有当前是已售状态才改回上架
-                        product.setProductStatus(2); // 2 =上架
-                    }
-                    //如果当前是下架状态(3)或其他状态，则保持原状态不变
-                }
-                productMapper.updateById(product);
-            }
-        }
-        
+
+        // 删除了原有的异常且冗余的商品库存检测逻辑，确认收货不应改变商品上下架状态
+
         int rows = ordersMapper.updateById(order);
         if (rows == 0) {
             throw new IllegalStateException("确认收货失败");
@@ -294,8 +273,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
         request.setBizContent(bizContent.toString());
 
-        // 注意：库存已在下单时预扣减，此处仅处理支付跳转
-        //订单状态保持为待支付(1)，等待支付宝回调更新为已支付(2)
         ordersMapper.updateById(order);
 
         try {
@@ -317,67 +294,41 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
         return dto;
     }
 
-    /**
-     *定：处理超时未支付的订单
-     *分钟执行一次
-     */
-    @Scheduled(fixedRate = 300000) // 5分钟执行一次
+    @Scheduled(fixedRate = 300000)
     @Transactional(rollbackFor = Exception.class)
     public void handleExpiredOrders() {
         log.info("开始处理超时未支付订单...");
-
         try {
-            // 查询30分钟前创建的待支付订单
             LocalDateTime expireTime = LocalDateTime.now().minusMinutes(30);
             LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Orders::getStatus, 1) //待状态
-                   .lt(Orders::getCreateTime, expireTime);
-            
+            wrapper.eq(Orders::getStatus, 1).lt(Orders::getCreateTime, expireTime);
+
             List<Orders> expiredOrders = ordersMapper.selectList(wrapper);
-            
-            if (expiredOrders.isEmpty()) {
-                log.info("没有发现超时未支付订单");
-                return;
-            }
-            
-            log.info("发现 {} 个超时未支付订单，开始处理...", expiredOrders.size());
-            
+            if (expiredOrders.isEmpty()) return;
+
             int successCount = 0;
             for (Orders order : expiredOrders) {
                 try {
-                    //回滚库存并恢复商品状态
                     List<OrderItem> orderItems = orderItemMapper.selectByOrderId(order.getId());
                     for (OrderItem item : orderItems) {
-                        //回滚库存
                         productMapper.increaseProductQuantity(item.getProductId(), item.getQuantity());
-                        
-                        //恢复商品状态（如果当前是已售状态）
                         Product product = productMapper.selectById(item.getProductId());
-                        if (product != null && product.getProductStatus() == 4) { // 4 =已售
-                            //检查是否还有其他已支付订单占用该商品
+                        if (product != null && product.getProductStatus() == 4) {
                             int paidOrderItemCount = ordersMapper.countPaidOrdersByProductId(item.getProductId());
                             if (paidOrderItemCount == 0) {
-                                product.setProductStatus(2); // 2 =上架
+                                product.setProductStatus(2);
                                 productMapper.updateById(product);
-                                log.info("商品 {}状态已从已售恢复为上架", product.getId());
                             }
                         }
                     }
-                    
-                    // 更新订单状态为已取消
                     order.setStatus(5);
                     ordersMapper.updateById(order);
-                    
                     successCount++;
-                    log.info("订单 {}超自动取消成功", order.getOrderNo());
                 } catch (Exception e) {
-                    log.error("处理订单 {}超取消失败", order.getOrderNo(), e);
+                    log.error("处理订单 {}超时取消失败", order.getOrderNo(), e);
                 }
             }
-            
-            log.info("超时订单处理完成：成功处理 {} 个，失败 {} 个", 
-                    successCount, expiredOrders.size() - successCount);
-                    
+            log.info("超时订单处理完成：成功处理 {} 个", successCount);
         } catch (Exception e) {
             log.error("处理超时订单任务异常", e);
         }

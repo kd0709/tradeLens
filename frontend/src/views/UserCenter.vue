@@ -291,11 +291,13 @@
         <el-form-item label="收货人"><el-input v-model="addressForm.receiverName" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="addressForm.receiverPhone" /></el-form-item>
         <el-form-item label="省市区">
-          <div style="display: flex; gap: 10px; width: 100%">
-            <el-input v-model="addressForm.province" placeholder="省" />
-            <el-input v-model="addressForm.city" placeholder="市" />
-            <el-input v-model="addressForm.district" placeholder="区" />
-          </div>
+          <el-cascader
+            v-model="addressForm.selectedRegion"
+            :options="pcaTextArr"
+            placeholder="请选择省市区"
+            style="width: 100%"
+            clearable
+          />
         </el-form-item>
         <el-form-item label="详细地址"><el-input v-model="addressForm.detailAddress" /></el-form-item>
         <el-form-item label="设为默认">
@@ -354,6 +356,7 @@ import { Plus, Location, Money, Goods, Wallet } from '@element-plus/icons-vue'
 import { getFullImageUrl } from '@/utils/image'
 import * as echarts from 'echarts'
 import type { FormInstance, FormRules } from 'element-plus'
+import { pcaTextArr } from 'element-china-area-data' // 引入省市区级联数据
 
 // API
 import { getBuyerOrders, getSellerOrders, deliverOrder, confirmOrder, cancelOrder } from '@/api/order'
@@ -420,8 +423,8 @@ const userInfoForm = reactive({
   email: authStore.user?.email || ''
 })
 
-const addressForm = reactive<AddressUpdateDto>({ 
-  id: 0, receiverName: '', receiverPhone: '', province: '', city: '', district: '', detailAddress: '', isDefault: 0 
+const addressForm = reactive<AddressUpdateDto & { selectedRegion?: string[] }>({ 
+  id: 0, receiverName: '', receiverPhone: '', province: '', city: '', district: '', detailAddress: '', isDefault: 0, selectedRegion: [] 
 })
 const commentForm = reactive<CommentPublishDto>({ orderId: 0, score: 5, content: '' })
 const currentOrderNo = ref('')
@@ -649,10 +652,18 @@ const handleCommentDialogClosed = () => {
 const openAddressDialog = (row?: AddressDto) => {
   isEditAddress.value = !!row
   Object.assign(addressForm, row || { id: undefined, receiverName: '', receiverPhone: '', province: '', city: '', district: '', detailAddress: '', isDefault: 0 })
+  addressForm.selectedRegion = row ? [row.province, row.city, row.district].filter(Boolean) : []
   addressDialogVisible.value = true
 }
 const saveAddress = async () => {
   if (!addressForm.receiverName || !addressForm.receiverPhone) return ElMessage.warning('请填写必填项')
+  if (!addressForm.selectedRegion || addressForm.selectedRegion.length < 2) return ElMessage.warning('请选择完整的省市区')
+  
+  // 从级联选择结果赋值省市区
+  addressForm.province = addressForm.selectedRegion[0] || ''
+  addressForm.city = addressForm.selectedRegion[1] || ''
+  addressForm.district = addressForm.selectedRegion[2] || ''
+
   try {
     await (isEditAddress.value ? updateAddress(addressForm) : createAddress({ ...addressForm }))
     addressDialogVisible.value = false; loadData(); ElMessage.success('保存成功')
@@ -709,6 +720,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+/* 保持原有样式不变 */
 .user-center-page {
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   min-height: calc(100vh - 64px);
@@ -716,7 +728,6 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
 
-  /* 背景装饰 */
   .bg-decoration {
     position: absolute;
     width: 500px;
@@ -730,227 +741,31 @@ onUnmounted(() => {
     &.right { background: #e0e7ff; top: 20%; right: -200px; }
   }
 }
-
 .container {
   max-width: 1000px;
   margin: 0 auto;
   position: relative;
   z-index: 1;
 }
-
-/* 顶部个人信息卡片 */
 .user-profile-header {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border-radius: 20px;
-  padding: 32px;
-  margin-bottom: 24px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-  border: 1px solid #fff;
-
+  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-radius: 20px;
+  padding: 32px; margin-bottom: 24px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04); border: 1px solid #fff;
   .profile-content {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    
+    display: flex; align-items: center; gap: 24px;
     .user-avatar { border: 4px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    
-    .info-block {
-      flex: 1;
-      .nickname {
-        font-size: 26px; font-weight: 800; color: #111827; margin: 0 0 8px;
-        display: flex; align-items: center; gap: 12px;
-      }
-      .email { color: #6b7280; font-size: 14px; }
-    }
-    
-    .stats-block {
-      display: flex; gap: 48px; padding-right: 20px; border-left: 1px solid #f3f4f6; padding-left: 48px;
-      .stat-item {
-        text-align: center;
-        .num { font-size: 24px; font-weight: 800; color: #10b981; margin-bottom: 4px; }
-        .label { font-size: 13px; color: #6b7280; }
-      }
-    }
+    .info-block { flex: 1; .nickname { font-size: 26px; font-weight: 800; color: #111827; margin: 0 0 8px; display: flex; align-items: center; gap: 12px; } .email { color: #6b7280; font-size: 14px; } }
+    .stats-block { display: flex; gap: 48px; padding-right: 20px; border-left: 1px solid #f3f4f6; padding-left: 48px; .stat-item { text-align: center; .num { font-size: 24px; font-weight: 800; color: #10b981; margin-bottom: 4px; } .label { font-size: 13px; color: #6b7280; } } }
   }
 }
-
-/* 玻璃面板通用样式 */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  border-radius: 20px;
-  border: 1px solid #fff;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-  min-height: 600px;
-  padding: 24px;
-}
-
-/* Tabs 样式优化 */
+.glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px); border-radius: 20px; border: 1px solid #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.03); min-height: 600px; padding: 24px; }
 :deep(.el-tabs__nav-wrap::after) { display: none; }
-:deep(.el-tabs__item) {
-  font-size: 16px; color: #6b7280; padding: 0 24px; height: 48px; line-height: 48px;
-  &.is-active { color: #10b981; font-weight: 700; }
-}
+:deep(.el-tabs__item) { font-size: 16px; color: #6b7280; padding: 0 24px; height: 48px; line-height: 48px; &.is-active { color: #10b981; font-weight: 700; } }
 :deep(.el-tabs__active-bar) { background-color: #10b981; height: 3px; border-radius: 2px; }
-
-/* 1. 基本信息表单 */
-.profile-form-wrapper {
-  max-width: 500px;
-  margin: 30px auto 0;
-  
-  .section-title { font-size: 18px; margin-bottom: 24px; color: #374151; font-weight: 600; }
-  
-  .avatar-uploader {
-    text-align: left;
-    :deep(.el-upload) {
-      border: 1px dashed #d9d9d9; border-radius: 50%; cursor: pointer; position: relative; overflow: hidden; transition: var(--el-transition-duration-fast);
-      &:hover { border-color: #10b981; }
-    }
-    .avatar-uploader-icon { font-size: 28px; color: #8c939d; width: 100px; height: 100px; line-height: 100px; text-align: center; }
-    .avatar { width: 100px; height: 100px; display: block; object-fit: cover; }
-    .upload-tip { margin-top: 10px; font-size: 12px; color: #9ca3af; text-align: center; }
-  }
-}
-
-/* 2. 订单卡片 */
-.order-list {
-  display: flex; flex-direction: column; gap: 16px;
-  .order-card {
-    border: 1px solid #f3f4f6; border-radius: 12px; overflow: hidden; background: #fff; transition: all 0.2s;
-    &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateY(-1px); }
-    
-    .card-header {
-      background: #f9fafb; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #6b7280;
-      .status-badge { font-weight: 600; &.status-danger {color:#ef4444} &.status-warning {color:#f59e0b} &.status-success {color:#10b981} &.status-primary {color:#3b82f6} }
-    }
-    .card-body {
-      padding: 20px; display: flex; justify-content: space-between; align-items: center;
-      .info-row {
-        .price-box { margin-bottom: 8px; .label {font-size:12px; color:#6b7280; margin-right:8px} .value {font-size:18px; font-weight:bold; color:#1f2937; &.success{color:#10b981}} }
-        .time-box, .address-box { font-size: 13px; color: #9ca3af; display: flex; align-items: center; gap: 4px; }
-      }
-      .action-row { display: flex; gap: 12px; }
-    }
-  }
-}
-
-/* 3. 商品网格 */
-.product-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;
-  .manage-product-card {
-    border: 1px solid #f3f4f6; border-radius: 12px; overflow: hidden; background: #fff; transition: all 0.2s;
-    &:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.06); transform: translateY(-2px); }
-    
-    .image-area {
-      position: relative; height: 160px; overflow: hidden; cursor: pointer;
-      .el-image { width: 100%; height: 100%; }
-      .status-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-    }
-    .info-area {
-      padding: 12px;
-      .title { font-size: 14px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #374151; }
-      .price { color: #ef4444; font-weight: bold; font-size: 16px; margin-bottom: 12px; }
-      .actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f9fafb; padding-top: 8px; }
-    }
-  }
-}
-
-/* 4. 地址卡片网格 */
-.address-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
-  
-  .address-card {
-    border: 1px solid #f3f4f6; border-radius: 12px; padding: 20px; background: #fff; transition: all 0.2s; position: relative;
-    &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #d1fae5; }
-    
-    &.add-card {
-      display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; border-style: dashed;
-      .icon { font-size: 32px; margin-bottom: 8px; }
-      &:hover { color: #10b981; border-color: #10b981; }
-    }
-    
-    .addr-header { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 600; color: #1f2937; }
-    .addr-body { font-size: 13px; color: #6b7280; line-height: 1.5; min-height: 40px; margin-bottom: 16px; }
-    .addr-actions { display: flex; justify-content: space-between; align-items: center; }
-  }
-}
-
-/* 动画 */
-.fade-down-enter-active, .fade-up-enter-active { transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.fade-down-enter-from { opacity: 0; transform: translateY(-30px); }
-.fade-up-enter-from { opacity: 0; transform: translateY(30px); }
-
-/* --- 销售统计模块样式 --- */
-.stats-wrapper {
-  padding: 0 10px;
-
-  /* 1. 顶部指标卡片 */
-  .stats-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-bottom: 32px;
-
-    .stat-card {
-      position: relative;
-      padding: 24px;
-      border-radius: 16px;
-      color: #fff;
-      overflow: hidden;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-      transition: transform 0.3s;
-
-      &:hover { transform: translateY(-4px); }
-
-      /* 背景渐变 */
-      &.gradient-blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-      &.gradient-green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-      &.gradient-purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-
-      .icon-bg {
-        position: absolute; right: -10px; top: -10px; opacity: 0.15; font-size: 100px; transform: rotate(15deg);
-      }
-
-      .content {
-        position: relative; z-index: 2;
-        .label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
-        .value { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
-      }
-    }
-  }
-
-  /* 2. 图表区域 */
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr; // 左侧趋势图宽，右侧饼图窄
-    gap: 24px;
-
-    .chart-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 20px;
-      border: 1px solid #f3f4f6;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-
-      .chart-header {
-        margin-bottom: 20px;
-        .title { font-size: 16px; font-weight: 700; color: #374151; border-left: 4px solid #10b981; padding-left: 12px; }
-      }
-
-      .echart-box {
-        width: 100%;
-        height: 320px; // 固定高度确保渲染
-      }
-    }
-  }
-}
-
-/* 响应式适配：小屏幕下改为单列 */
-@media (max-width: 768px) {
-  .stats-wrapper {
-    .stats-summary-grid { grid-template-columns: 1fr; }
-    .charts-grid { grid-template-columns: 1fr; }
-  }
-}
+.profile-form-wrapper { max-width: 500px; margin: 30px auto 0; .section-title { font-size: 18px; margin-bottom: 24px; color: #374151; font-weight: 600; } .avatar-uploader { text-align: left; :deep(.el-upload) { border: 1px dashed #d9d9d9; border-radius: 50%; cursor: pointer; position: relative; overflow: hidden; transition: var(--el-transition-duration-fast); &:hover { border-color: #10b981; } } .avatar-uploader-icon { font-size: 28px; color: #8c939d; width: 100px; height: 100px; line-height: 100px; text-align: center; } .avatar { width: 100px; height: 100px; display: block; object-fit: cover; } .upload-tip { margin-top: 10px; font-size: 12px; color: #9ca3af; text-align: center; } } }
+.order-list { display: flex; flex-direction: column; gap: 16px; .order-card { border: 1px solid #f3f4f6; border-radius: 12px; overflow: hidden; background: #fff; transition: all 0.2s; &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateY(-1px); } .card-header { background: #f9fafb; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #6b7280; .status-badge { font-weight: 600; &.status-danger {color:#ef4444} &.status-warning {color:#f59e0b} &.status-success {color:#10b981} &.status-primary {color:#3b82f6} } } .card-body { padding: 20px; display: flex; justify-content: space-between; align-items: center; .info-row { .price-box { margin-bottom: 8px; .label {font-size:12px; color:#6b7280; margin-right:8px} .value {font-size:18px; font-weight:bold; color:#1f2937; &.success{color:#10b981}} } .time-box, .address-box { font-size: 13px; color: #9ca3af; display: flex; align-items: center; gap: 4px; } } .action-row { display: flex; gap: 12px; } } } }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; .manage-product-card { border: 1px solid #f3f4f6; border-radius: 12px; overflow: hidden; background: #fff; transition: all 0.2s; &:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.06); transform: translateY(-2px); } .image-area { position: relative; height: 160px; overflow: hidden; cursor: pointer; .el-image { width: 100%; height: 100%; } .status-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; } } .info-area { padding: 12px; .title { font-size: 14px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #374151; } .price { color: #ef4444; font-weight: bold; font-size: 16px; margin-bottom: 12px; } .actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f9fafb; padding-top: 8px; } } } }
+.address-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; .address-card { border: 1px solid #f3f4f6; border-radius: 12px; padding: 20px; background: #fff; transition: all 0.2s; position: relative; &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #d1fae5; } &.add-card { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; border-style: dashed; .icon { font-size: 32px; margin-bottom: 8px; } &:hover { color: #10b981; border-color: #10b981; } } .addr-header { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 600; color: #1f2937; } .addr-body { font-size: 13px; color: #6b7280; line-height: 1.5; min-height: 40px; margin-bottom: 16px; } .addr-actions { display: flex; justify-content: space-between; align-items: center; } } }
+.fade-down-enter-active, .fade-up-enter-active { transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); } .fade-down-enter-from { opacity: 0; transform: translateY(-30px); } .fade-up-enter-from { opacity: 0; transform: translateY(30px); }
+.stats-wrapper { padding: 0 10px; .stats-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; .stat-card { position: relative; padding: 24px; border-radius: 16px; color: #fff; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: transform 0.3s; &:hover { transform: translateY(-4px); } &.gradient-blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); } &.gradient-green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); } &.gradient-purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); } .icon-bg { position: absolute; right: -10px; top: -10px; opacity: 0.15; font-size: 100px; transform: rotate(15deg); } .content { position: relative; z-index: 2; .label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; } .value { font-size: 28px; font-weight: 800; margin-bottom: 12px; } } } } .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; .chart-card { background: #fff; border-radius: 16px; padding: 20px; border: 1px solid #f3f4f6; box-shadow: 0 4px 12px rgba(0,0,0,0.02); .chart-header { margin-bottom: 20px; .title { font-size: 16px; font-weight: 700; color: #374151; border-left: 4px solid #10b981; padding-left: 12px; } } .echart-box { width: 100%; height: 320px; } } } }
+@media (max-width: 768px) { .stats-wrapper { .stats-summary-grid { grid-template-columns: 1fr; } .charts-grid { grid-template-columns: 1fr; } } }
 </style>

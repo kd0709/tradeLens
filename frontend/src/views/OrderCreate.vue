@@ -129,18 +129,14 @@
         <el-form-item label="电话" prop="receiverPhone">
           <el-input v-model="addressForm.receiverPhone" placeholder="请输入手机号" />
         </el-form-item>
-        <el-form-item label="区域">
-          <el-row :gutter="10">
-            <el-col :span="8">
-              <el-input v-model="addressForm.province" placeholder="省" />
-            </el-col>
-            <el-col :span="8">
-              <el-input v-model="addressForm.city" placeholder="市" />
-            </el-col>
-            <el-col :span="8">
-              <el-input v-model="addressForm.district" placeholder="区/县" />
-            </el-col>
-          </el-row>
+        <el-form-item label="所在地区" prop="selectedRegion">
+          <el-cascader
+            v-model="addressForm.selectedRegion"
+            :options="pcaTextArr"
+            placeholder="请选择省市区"
+            style="width: 100%"
+            clearable
+          />
         </el-form-item>
         <el-form-item label="详细地址" prop="detailAddress">
           <el-input
@@ -165,6 +161,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElForm } from 'element-plus'
 import { Plus, Select, LocationInformation } from '@element-plus/icons-vue'
+import { pcaTextArr } from 'element-china-area-data' // 引入省市区级联数据
 
 import { getProductDetail } from '@/api/product'
 import { getMyAddressList, createAddress } from '@/api/address'
@@ -194,14 +191,15 @@ const orderItems = ref<Array<{
   productQuantity: number 
 }>>([])
 
-const addressForm = reactive<Partial<AddressDto>>({
+const addressForm = reactive<Partial<AddressDto> & { selectedRegion?: string[] }>({
   receiverName: '',
   receiverPhone: '',
   province: '',
   city: '',
   district: '',
   detailAddress: '',
-  isDefault: 0
+  isDefault: 0,
+  selectedRegion: []
 })
 
 const addressRules = {
@@ -210,6 +208,7 @@ const addressRules = {
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: ['blur', 'change'] }
   ],
+  selectedRegion: [{ required: true, message: '请选择省市区', trigger: 'change' }],
   detailAddress: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
 }
 
@@ -326,6 +325,14 @@ const handleSaveAddress = async () => {
 
   try {
     await addressFormRef.value.validate()
+    
+    // 从选择器获取完整的省市区文本并赋值给DTO
+    if (addressForm.selectedRegion && addressForm.selectedRegion.length > 0) {
+      addressForm.province = addressForm.selectedRegion[0] || ''
+      addressForm.city = addressForm.selectedRegion[1] || ''
+      addressForm.district = addressForm.selectedRegion[2] || ''
+    }
+
     await createAddress(addressForm as AddressCreateDto)
     ElMessage.success('地址添加成功')
     addressDialogVisible.value = false
@@ -336,7 +343,8 @@ const handleSaveAddress = async () => {
       province: '',
       city: '',
       district: '',
-      detailAddress: ''
+      detailAddress: '',
+      selectedRegion: []
     })
 
     await loadAddresses()
@@ -392,102 +400,41 @@ onMounted(initData)
 </script>
 
 <style scoped lang="scss">
+/* 保持原有样式不变 */
 .order-create-page {
   background-color: #f9fafb;
   min-height: 100vh;
   padding-bottom: 80px;
 }
-
 .container {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
 }
-
 .page-header { margin-bottom: 20px; }
-
 .section-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-
-  .card-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #f3f4f6;
-    padding-bottom: 12px;
-  }
+  background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f3f4f6; padding-bottom: 12px; }
 }
-
 .address-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
   .address-item {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s;
-    
+    border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; cursor: pointer; position: relative; transition: all 0.2s;
     &:hover { border-color: #10b981; }
-    &.active {
-      border-color: #10b981;
-      background-color: #ecfdf5;
-      box-shadow: 0 0 0 1px #10b981;
-    }
-    .check-icon {
-      position: absolute; right: 0; bottom: 0;
-      background: #10b981; color: #fff;
-      padding: 2px 6px; border-top-left-radius: 8px;
-    }
+    &.active { border-color: #10b981; background-color: #ecfdf5; box-shadow: 0 0 0 1px #10b981; }
+    .check-icon { position: absolute; right: 0; bottom: 0; background: #10b981; color: #fff; padding: 2px 6px; border-top-left-radius: 8px; }
   }
-  .empty-address {
-    border: 1px dashed #d1d5db; padding: 20px; text-align: center; color: #9ca3af; cursor: pointer;
-  }
+  .empty-address { border: 1px dashed #d1d5db; padding: 20px; text-align: center; color: #9ca3af; cursor: pointer; }
 }
-
-.product-item-wrapper {
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-  border-bottom: 1px dashed #f3f4f6;
-  &:last-of-type { border-bottom: none; }
-}
-
+.product-item-wrapper { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px dashed #f3f4f6; &:last-of-type { border-bottom: none; } }
 .product-row {
-  display: flex;
-  gap: 16px;
-
+  display: flex; gap: 16px;
   .thumb { width: 80px; height: 80px; border-radius: 6px; background: #f9fafb; }
-  .info {
-    flex: 1; display: flex; flex-direction: column; justify-content: space-between;
-    .title { font-size: 15px; font-weight: 500; }
-    .price-line .price { color: #ef4444; font-weight: bold; }
-    .stock-info { margin-top: 6px; }
-  }
+  .info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; .title { font-size: 15px; font-weight: 500; } .price-line .price { color: #ef4444; font-weight: bold; } .stock-info { margin-top: 6px; } }
 }
-
-.calc-row {
-  border-top: 1px solid #f3f4f6;
-  padding-top: 16px;
-  .item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
-}
-
+.calc-row { border-top: 1px solid #f3f4f6; padding-top: 16px; .item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; } }
 .bottom-bar {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: #fff; border-top: 1px solid #e5e7eb; padding: 12px 20px; z-index: 99;
-  .bar-container {
-    max-width: 800px; margin: 0 auto; display: flex; justify-content: flex-end; align-items: center; gap: 20px;
-    .total-box { font-size: 14px; .price { font-size: 24px; color: #ef4444; font-weight: bold; } }
-    .submit-btn { width: 140px; background-color: #10b981; border-color: #10b981; }
-  }
+  position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e7eb; padding: 12px 20px; z-index: 99;
+  .bar-container { max-width: 800px; margin: 0 auto; display: flex; justify-content: flex-end; align-items: center; gap: 20px; .total-box { font-size: 14px; .price { font-size: 24px; color: #ef4444; font-weight: bold; } } .submit-btn { width: 140px; background-color: #10b981; border-color: #10b981; } }
 }
 </style>

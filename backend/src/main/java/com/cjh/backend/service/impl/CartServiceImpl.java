@@ -20,7 +20,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CartServiceImpl extends ServiceImpl<CartMapper, Cart>
-    implements CartService{
+        implements CartService{
 
     private final CartMapper cartMapper;
     private final ProductMapper productMapper;
@@ -33,15 +33,35 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart>
             throw new RuntimeException("商品不存在或不可加入购物车");
         }
 
+        // 增加逻辑校验：不能将自己发布的商品加购
+        if (product.getUserId().equals(userId)) {
+            throw new RuntimeException("不能将自己发布的商品加入购物车");
+        }
+
+        // 读取实时库存进行后续判断校验
+        Integer currentStock = productMapper.checkProductStock(dto.getProductId());
+
         Long existCartId = cartMapper.selectCartIdByUserAndProduct(userId, dto.getProductId());
         if (existCartId != null) {
             Cart existCart = cartMapper.selectById(existCartId);
-            existCart.setQuantity(existCart.getQuantity() + dto.getQuantity());
+            int newQuantity = existCart.getQuantity() + dto.getQuantity();
+
+            // 增加逻辑校验：合并后数量不能超过总库存
+            if (currentStock == null || newQuantity > currentStock) {
+                throw new RuntimeException("购物车内总数量超出该商品当前库存限制");
+            }
+
+            existCart.setQuantity(newQuantity);
             int rows = cartMapper.updateById(existCart);
             if (rows == 0) {
                 throw new IllegalStateException("更新购物车数量失败");
             }
             return existCartId;
+        }
+
+        // 增加逻辑校验：首单数量不能超过库存
+        if (currentStock == null || dto.getQuantity() > currentStock) {
+            throw new RuntimeException("添加数量超出该商品当前库存限制");
         }
 
         Cart cart = new Cart();
