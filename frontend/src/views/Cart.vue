@@ -29,6 +29,7 @@
             </div>
             <div class="col-info">商品信息</div>
             <div class="col-price">单价</div>
+            <div class="col-stock">库存</div> 
             <div class="col-qty">数量</div>
             <div class="col-total">小计</div>
             <div class="col-action">操作</div>
@@ -70,21 +71,22 @@
                   </div>
 
                   <div class="col-price center">
-                    <span class="price-text">¥{{ formatPrice(item.price) }}</span>
+                      <span class="price-text">¥{{ formatPrice(item.price) }}</span>
+                  </div>
+
+                  <div class="col-stock center">
+                    <span class="stock-text">{{ item.productQuantity ?? 0 }}</span>
                   </div>
 
                   <div class="col-qty center">
                     <el-input-number 
                       v-model="item.quantity" 
                       :min="1" 
-                      :max="Math.min(99, item.productQuantity || 99)"
+                      :max="Math.min(99, item.productQuantity ?? 99)"
                       size="small"
                       @change="(val: number) => onQuantityChange(item, val)"
                       class="custom-input-number"
                     />
-                    <div class="stock-info">
-                      库存: {{ item.productQuantity }}
-                    </div>
                   </div>
 
                   <div class="col-total center">
@@ -172,7 +174,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture, Delete } from '@element-plus/icons-vue' 
-import { showSuccess, showError, showWarning, showInfo } from '@/utils/message' 
+import { showSuccess, showError, showWarning } from '@/utils/message' 
 
 import { getCartList, updateCartQuantity, deleteCartItems } from '@/api/cart'
 import type { CartListDto } from '@/dto/cart'
@@ -184,11 +186,16 @@ const selectionSet = ref<number[]>([])
 const loading = ref(false)
 const checkoutLoading = ref(false)
 
+const normalizePrice = (price: unknown) => {
+  const normalized = Number(price)
+  return Number.isFinite(normalized) ? normalized : 0
+}
+
 const totalPrice = computed(() => {
   const sum = selectionSet.value.reduce((acc, id) => {
     const item = cartList.value.find(i => i.id === id)
     if (item) {
-      return acc + (Number(item.price) * 100 * item.quantity)
+      return acc + (normalizePrice(item.price) * 100 * item.quantity)
     }
     return acc
   }, 0)
@@ -204,21 +211,29 @@ const isIndeterminate = computed(() =>
   selectionSet.value.length > 0 && selectionSet.value.length < cartList.value.length
 )
 
-const formatPrice = (price: number | string) => {
-  return Number(price).toFixed(2)
+const formatPrice = (price: unknown) => {
+  const normalized = Number(price)
+  // 如果价格 >= 100，假设是以分为单位，转换为元
+  const priceInCents = Number.isFinite(normalized) ? normalized : 0
+  const priceInYuan = priceInCents >= 100 ? priceInCents / 100 : priceInCents
+  return Number.isFinite(priceInYuan) ? priceInYuan.toFixed(2) : '--'
 }
 
+
 const calculateItemTotal = (item: CartListDto) => {
-  return ((Number(item.price) * 100 * item.quantity) / 100).toFixed(2)
+  return ((normalizePrice(item.price) * 100 * item.quantity) / 100).toFixed(2)
 }
 
 const loadData = async () => {
   loading.value = true
   try {
     const res = await getCartList()
-    cartList.value = res || []
+    cartList.value = (res || []).map((item: any) => ({
+      ...item,
+      price: item.price ?? item.productPrice ?? item.unitPrice ?? 0
+    }))
+    console.log('购物车数据:', cartList.value)
   } catch (e) {
-    //车操作异常已由 ElMessage处理
     ElMessage.error('购物车数据加载失败')
   } finally {
     loading.value = false
@@ -232,7 +247,7 @@ const handleCheckAllChange = (checked: boolean) => {
 const debounceTimers = new Map<number, number>()
 const onQuantityChange = (item: CartListDto, val: number) => {
   if (!item) return
-  item.quantity = val // 立即响应 UI
+  item.quantity = val 
   
   if (debounceTimers.has(item.id)) {
     clearTimeout(debounceTimers.get(item.id))
@@ -243,7 +258,6 @@ const onQuantityChange = (item: CartListDto, val: number) => {
       await updateCartQuantity({ id: item.id, quantity: val })
       debounceTimers.delete(item.id)
     } catch (e) {
-      //车操作异常已由 ElMessage处理
       showWarning('数量同步失败，请刷新页面')
       loadData()
     }
@@ -281,7 +295,6 @@ const handleCheckout = async () => {
   
   checkoutLoading.value = true
   
-  // 检查选中商品的库存
   const selectedItems = cartList.value.filter(item => selectionSet.value.includes(item.id))
   for (const item of selectedItems) {
     if (item.quantity > item.productQuantity) {
@@ -291,9 +304,7 @@ const handleCheckout = async () => {
   }
   
   try {
-    // 模拟处理延迟，提升用户体验
     await new Promise(resolve => setTimeout(resolve, 500))
-    
     router.push({
       path: '/order/create',
       query: { cartIds: selectionSet.value.join(',') }
@@ -323,7 +334,6 @@ onMounted(() => {
   position: relative;
   overflow-x: hidden; 
 
-  /* 背景装饰 */
   .bg-decoration {
     position: absolute;
     width: 500px;
@@ -376,7 +386,6 @@ onMounted(() => {
   }
 }
 
-/* 购物车卡片：毛玻璃效果 */
 .cart-card, .empty-card {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
@@ -388,11 +397,10 @@ onMounted(() => {
 
 .empty-card { padding: 80px 0; }
 
-/* 核心布局：Grid 系统 - 确保严格对齐 */
 .grid-layout {
   display: grid;
-  /* 列宽定义: Checkbox | Info(弹性) | Price | Qty | Total | Action */
-  grid-template-columns: 60px 1fr 140px 160px 140px 100px;
+  /* 重新分配了列宽，加入了新的 Stock 列: Checkbox | Info | Price | Stock | Qty | Total | Action */
+  grid-template-columns: 60px 1fr 120px 100px 160px 120px 100px;
   align-items: center;
 }
 
@@ -404,8 +412,7 @@ onMounted(() => {
   color: #6b7280;
   font-weight: 600;
   
-  // 居中对齐的列
-  .col-price, .col-qty, .col-total, .col-action { text-align: center; }
+  .col-price, .col-stock, .col-qty, .col-total, .col-action { text-align: center; }
 }
 
 .cart-list {
@@ -421,14 +428,13 @@ onMounted(() => {
   &:last-child { border-bottom: none; }
   
   &:hover {
-    background-color: rgba(240, 253, 244, 0.5); // 极淡的绿色悬浮
+    background-color: rgba(240, 253, 244, 0.5); 
   }
   
   &.is-selected {
-    background-color: rgba(240, 253, 244, 0.8); // 选中背景
+    background-color: rgba(240, 253, 244, 0.8); 
   }
 
-  // 通用居中辅助
   .center {
     display: flex;
     justify-content: center;
@@ -470,10 +476,14 @@ onMounted(() => {
     }
   }
 
-  .price-text { color: #4b5563; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .price-text { 
+    color: #1f2937; // 加深颜色，从#4b5563 改为更深的#1f2937
+    font-weight: 600; // 加粗字体
+    font-size: 15px; // 明确指定字号
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+  }
+  .stock-text { color: #6b7280; font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   .total-text { color: #ef4444; font-weight: 700; font-size: 16px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  
-  .stock-info { margin-left: 10px; font-size: 12px; color: #6b7280; }
   
   .delete-btn {
     font-size: 18px; color: #9ca3af;
@@ -481,7 +491,6 @@ onMounted(() => {
   }
 }
 
-/* 底部结算栏 */
 .bottom-bar-placeholder { height: 80px; }
 .bottom-bar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
@@ -528,7 +537,6 @@ onMounted(() => {
   }
 }
 
-/* 动画效果 */
 .list-anim-move,
 .list-anim-enter-active,
 .list-anim-leave-active {
@@ -541,7 +549,7 @@ onMounted(() => {
 }
 .list-anim-leave-active {
   position: absolute;
-  width: 100%; // 确保删除时其他元素平滑移动
+  width: 100%;
 }
 
 .fade-down-enter-active, .fade-up-enter-active, .slide-up-enter-active {
@@ -550,25 +558,6 @@ onMounted(() => {
 .fade-down-enter-from { opacity: 0; transform: translateY(-20px); }
 .fade-up-enter-from { opacity: 0; transform: translateY(30px); }
 .slide-up-enter-from { transform: translateY(100%); }
-
-/*按钮悬停效果 */
-.cart-btn-hover {
-  transition: all 0.2s ease;
-}
-
-.cart-btn-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-/* 数量输入框动画 */
-.quantity-change {
-  animation: quantityChange 0.3s ease;
-}
-
-@keyframes quantityChange {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
 </style>
+
+```

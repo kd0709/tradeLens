@@ -73,6 +73,8 @@
           <img 
             :src="getFullImageUrl(item.mainImage)" 
             :alt="item.title"
+            loading="lazy"
+            decoding="async"
           />
           <div class="condition-tag" v-if="item.conditionLevel">
             {{ getConditionText(item.conditionLevel) }}
@@ -125,10 +127,6 @@ import { getCategoryList } from '@/api/category'
 import { getFullImageUrl } from '@/utils/image' 
 import type { ProductQuery } from '@/dto/product'
 
-/**
- * 性能优化核心：声明组件名称以便被 App.vue 中的 KeepAlive 识别缓存
- * 这样从详情页返回首页时，数据和 DOM 都会保持原样，不会重新请求接口，也不会卡顿闪烁
- */
 defineOptions({ name: 'Home' })
 
 const router = useRouter()
@@ -141,7 +139,9 @@ const categories = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '全
 const isSticky = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-// 记录滚动条位置的纯内存变量（性能优于 localStorage）
+// 标题高亮缓存，避免同一批次渲染重复进行正则替换
+const highlightedTitleCache = new Map<string, string>()
+
 const savedScrollY = ref(0)
 
 const banners = ref<any[]>([
@@ -253,10 +253,22 @@ const formatTime = (timeStr: string) => {
 
 const highlightKeyword = (title: string) => {
   if (!queryParams.keyword) return title
+
+  const cacheKey = `${queryParams.keyword}::${title}`
+  const cachedValue = highlightedTitleCache.get(cacheKey)
+  if (cachedValue) return cachedValue
+
+
   const safeKeyword = queryParams.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const reg = new RegExp(safeKeyword, 'gi')
-  return title.replace(reg, (match) => `<span style="color: #10b981; font-weight:bold">${match}</span>`)
+  const highlighted = title.replace(reg, (match) => `<span style="color: #10b981; font-weight:bold">${match}</span>`)
+  highlightedTitleCache.set(cacheKey, highlighted)
+  return highlighted
 }
+
+watch(() => queryParams.keyword, () => {
+  highlightedTitleCache.clear()
+})
 
 watch(() => route.query.q, (newVal) => {
   queryParams.keyword = (newVal as string) || ''

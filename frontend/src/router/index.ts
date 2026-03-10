@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
-import AdminLayout from '../layout/AdminLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -16,7 +14,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: Home
+      component: () => import('../views/Home.vue')
     },
     {
       path: '/login',
@@ -62,7 +60,7 @@ const router = createRouter({
     // 后台管理路由组
     {
       path: '/admin',
-      component: AdminLayout,
+      component: () => import('../layout/AdminLayout.vue'),
       redirect: '/admin/dashboard',
       meta: { requiresAuth: true, requiresAdmin: true },
       children: [

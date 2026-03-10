@@ -12,7 +12,7 @@ const route = useRoute()
   <RouterView v-slot="{ Component }">
     <Transition name="zoom-fade" mode="out-in">
       <keep-alive include="Home">
-        <component :is="Component" :key="route.fullPath" />
+        <component :is="Component" :key="String(route.name || route.path)" />
       </keep-alive>
     </Transition>
   </RouterView>
@@ -33,7 +33,7 @@ a { text-decoration: none; }
 /* 页面动画 */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: all 0.3s ease-out;
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
 .page-fade-enter-from {
@@ -49,7 +49,7 @@ a { text-decoration: none; }
 /*淡入放大动画 */
 .zoom-fade-enter-active,
 .zoom-fade-leave-active {
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .zoom-fade-enter-from {

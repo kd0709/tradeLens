@@ -33,4 +33,8 @@ public class OrderListDto {
     private LocalDateTime finishTime;
 
     private Integer isCommented;
+
+
+    private String commentContent;
+    private Integer commentScore;
 }

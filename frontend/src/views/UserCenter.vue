@@ -110,11 +110,20 @@
                         <el-button v-if="[1,2].includes(order.status)" round size="small" @click="handleCancel(order)">取消订单</el-button>
                         
                         <el-button v-if="order.status === 4 && order.isCommented !== 1" round size="small" @click="openCommentDialog(order)">评价</el-button>
-                        <el-button v-else-if="order.status === 4 && order.isCommented === 1" disabled round size="small">已评价</el-button>
-                        
                         <el-button v-if="[4,5].includes(order.status)" text size="small">删除记录</el-button>
                       </div>
                     </div>
+                    
+                    <div class="my-comment-box" v-if="order.isCommented === 1 && order.commentContent">
+                      <div class="comment-header">
+                        <span class="comment-label">我的评价</span>
+                        <el-rate :model-value="order.commentScore" disabled text-color="#ff9900" />
+                      </div>
+                      <div class="comment-content">
+                        {{ order.commentContent }}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -629,10 +638,12 @@ const submitComment = async () => {
         ElMessage.success('评价提交成功！')
         commentDialogVisible.value = false
         
-        // 乐观更新：立刻在当前列表将该订单标记为已评价，修改为 1
+        // 乐观更新：立刻在当前列表展示刚提交的评价内容
         const currentOrder = buyerOrders.value.find(o => o.id === commentForm.orderId)
         if (currentOrder) {
           currentOrder.isCommented = 1
+          currentOrder.commentContent = commentForm.content
+          currentOrder.commentScore = commentForm.score
         }
 
       } catch (error) {
@@ -643,6 +654,7 @@ const submitComment = async () => {
     }
   })
 }
+
 
 const handleCommentDialogClosed = () => {
   if (commentFormRef.value) {
@@ -746,6 +758,39 @@ onUnmounted(() => {
   margin: 0 auto;
   position: relative;
   z-index: 1;
+}
+
+
+/* 在 .order-card 花括号内部最底下加上这段 */
+.my-comment-box {
+  background: #f9fafb;
+  border-top: 1px dashed #e5e7eb;
+  padding: 12px 20px;
+  margin-top: -8px; /* 缩进一点与上面的间距对齐 */
+  
+  .comment-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    .comment-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      padding-left: 8px;
+      border-left: 3px solid #10b981;
+    }
+  }
+  
+  .comment-content {
+    font-size: 13px;
+    color: #4b5563;
+    line-height: 1.6;
+    background: #fff;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #f3f4f6;
+  }
 }
 .user-profile-header {
   background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-radius: 20px;

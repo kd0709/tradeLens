@@ -45,6 +45,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
     private final AddressMapper addressMapper;
     private final AlipayClient alipayClient;
     private final AlipayConfig alipayConfig;
+    private final CommentMapper commentMapper;
 
     // 注入 Redisson 客户端
     private final RedissonClient redissonClient;
@@ -155,11 +156,23 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders>
 
         return toDetailDto(order);
     }
-
-    @Override
     public IPage<OrderListDto> listBuyerOrders(Page<Orders> page, Long buyerId, Integer status) {
         IPage<Orders> orderPage = ordersMapper.selectBuyerOrders(page, buyerId, status);
-        return orderPage.convert(this::toListDto);
+
+        return orderPage.convert(order -> {
+            OrderListDto dto = toListDto(order);
+            // 如果订单已评价，则去 comment 表查询对应的内容
+            if (dto.getIsCommented() != null && dto.getIsCommented() == 1) {
+                QueryWrapper<Comment> queryWrapper = new QueryWrapper<>();
+                queryWrapper.eq("order_id", dto.getId());
+                Comment comment = commentMapper.selectOne(queryWrapper);
+                if (comment != null) {
+                    dto.setCommentContent(comment.getContent());
+                    dto.setCommentScore(comment.getScore());
+                }
+            }
+            return dto;
+        });
     }
 
     @Override
