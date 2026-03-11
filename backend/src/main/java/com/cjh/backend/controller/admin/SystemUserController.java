@@ -4,12 +4,21 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cjh.backend.entity.User;
 import com.cjh.backend.service.UserService;
+import com.cjh.backend.utils.ExcelUtils;
 import com.cjh.backend.utils.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import com.alibaba.excel.EasyExcel;
+import com.cjh.backend.dto.User.UserExportDto;
+import jakarta.servlet.http.HttpServletResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 后台管理系统 - 用户模块 CRUD 控制器
@@ -129,5 +138,20 @@ public class SystemUserController {
         
         boolean removed = userService.removeById(id);
         return removed ? Result.success("删除用户成功") : Result.fail("删除失败");
+    }
+
+    /**
+     * 6. 批量导出用户信息为 Excel (模块3功能)
+     */
+    @GetMapping("/export")
+    public void exportUsers(HttpServletResponse response) {
+        List<UserExportDto> exportList = userService.list().stream().map(user -> {
+            UserExportDto dto = new UserExportDto();
+            BeanUtils.copyProperties(user, dto); // 使用 BeanUtils 快速拷贝同名字段
+            return dto;
+        }).collect(Collectors.toList());
+
+        // 一行代码完成导出
+        ExcelUtils.export(response, "用户信息导出", "用户列表", exportList, UserExportDto.class);
     }
 }

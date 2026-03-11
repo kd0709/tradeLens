@@ -2,13 +2,17 @@ package com.cjh.backend.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cjh.backend.dto.Orders.OrdersExportDto;
 import com.cjh.backend.entity.Orders;
 import com.cjh.backend.service.OrdersService;
 import com.cjh.backend.utils.Result;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 后台管理系统 - 订单模块 CRUD 控制器
@@ -81,5 +85,20 @@ public class SystemOrdersController {
         log.info("System Admin - 删除订单：id={}", id);
         boolean removed = ordersService.removeById(id);
         return removed ? Result.success("删除订单成功") : Result.fail("删除失败");
+    }
+
+    /**
+     * 7. 导出数据
+     */
+    @GetMapping("/export")
+    public void exportProducts(HttpServletResponse response) {
+        // 假设已创建 ProductExportDto
+        List<OrdersExportDto> exportList = ordersService.list().stream().map(p -> {
+            OrdersExportDto dto = new OrdersExportDto();
+            org.springframework.beans.BeanUtils.copyProperties(p, dto);
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
+
+        com.cjh.backend.utils.ExcelUtils.export(response, "商品信息导出", "商品列表", exportList, OrdersExportDto.class);
     }
 }

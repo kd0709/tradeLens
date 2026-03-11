@@ -12,3 +12,5 @@ export function register(data: RegisterRequest): Promise<void> {
 export function logout(): Promise<void> {
   return request.post('/api/auth/logout')
 }
+
+

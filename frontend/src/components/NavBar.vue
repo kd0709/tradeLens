@@ -25,6 +25,12 @@
         </router-link>
         
         <div v-if="authStore.user" class="user-menu">
+           <router-link to="/messages" class="icon-link">
+             <el-badge :value="messageStore.unreadCount" :hidden="messageStore.unreadCount === 0" class="badge">
+               <el-icon><Message /></el-icon>
+             </el-badge>
+           </router-link>
+
            <router-link to="/cart" class="icon-link">
              <el-badge :value="0" hidden class="badge">
                <el-icon><ShoppingCart /></el-icon>
@@ -56,16 +62,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Search, ShoppingCart } from '@element-plus/icons-vue'
+import { useMessageStore } from '@/stores/message'
+import { Search, ShoppingCart, Message } from '@element-plus/icons-vue'
 import { getFullImageUrl } from '@/utils/image'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const messageStore = useMessageStore()
 const keyword = ref('')
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+
+// 页面加载或刷新时，如果用户已登录但 WebSocket 未连接，则主动建立连接
+onMounted(() => {
+  if (authStore.isLoggedIn && !messageStore.ws) {
+    messageStore.connectWs()
+  }
+})
 
 const handleSearch = () => {
   if (keyword.value.trim()) {
@@ -153,8 +168,15 @@ const handleLogout = () => {
       color: #6b7280;
       font-size: 20px;
       transition: color 0.2s;
+      display: flex;
+      align-items: center;
       
       &:hover { color: #10b981; }
+      
+      .badge {
+        display: flex;
+        align-items: center;
+      }
     }
 
     .user-menu {

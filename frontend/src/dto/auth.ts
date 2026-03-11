@@ -10,6 +10,7 @@ export interface RegisterRequest {
 
 
 export interface UserInfo {
+  id: number
   username: string
   nickname: string
   phone?: string

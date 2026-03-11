@@ -40,6 +40,7 @@ public class AuthServiceImpl extends ServiceImpl<UserMapper, User>
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
         UserInfoDto userInfoDto = new UserInfoDto();
+        userInfoDto.setId(user.getId());
         userInfoDto.setUsername(user.getUsername());
         userInfoDto.setNickname(user.getNickname());
         userInfoDto.setPhone(user.getPhone());

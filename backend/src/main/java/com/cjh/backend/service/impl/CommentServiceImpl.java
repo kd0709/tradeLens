@@ -1,15 +1,18 @@
 package com.cjh.backend.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cjh.backend.dto.Comment.CommentListDto;
 import com.cjh.backend.dto.Comment.CommentPublishDto;
 import com.cjh.backend.entity.Comment;
 import com.cjh.backend.entity.OrderItem;
 import com.cjh.backend.entity.Orders;
+import com.cjh.backend.entity.User;
+import com.cjh.backend.mapper.CommentMapper;
 import com.cjh.backend.mapper.OrderItemMapper;
 import com.cjh.backend.mapper.OrdersMapper;
+import com.cjh.backend.mapper.UserMapper;
 import com.cjh.backend.service.CommentService;
-import com.cjh.backend.mapper.CommentMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -21,11 +24,12 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
-    implements CommentService{
+        implements CommentService{
 
     private final CommentMapper commentMapper;
     private final OrderItemMapper orderItemMapper;
     private final OrdersMapper ordersMapper;
+    private final UserMapper userMapper; // 新增注入 UserMapper 用于更新信用分
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -61,9 +65,20 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
             throw new IllegalStateException("发表评价失败");
         }
 
-        // 2. 更新订单表的是否评价状态 (这里是修改的重点！)
+        // 2. 更新订单表的是否评价状态
         order.setIsCommented(1);
         ordersMapper.updateById(order);
+
+        // 3. 本论文信用分体系：动态计算并更新卖家信用分 (5星+2分，4星+1分，3星不扣，2星-1分，1星-2分)
+        if (dto.getScore() != null) {
+            int delta = dto.getScore() - 3;
+            if (delta != 0) {
+                Long sellerId = order.getSellerId();
+                userMapper.update(null, new LambdaUpdateWrapper<User>()
+                        .setSql("credit_score = credit_score + " + delta)
+                        .eq(User::getId, sellerId));
+            }
+        }
     }
 
     @Override

@@ -53,3 +53,9 @@ export function updateSystemCategory(data: any) {
 export function deleteSystemCategory(id: number) {
   return request.delete(`/api/system/category/${id}`)
 }
+
+export const exportUsers = () => {
+  return request.get('/api/system/user/export', {
+    responseType: 'blob'
+  })
+}

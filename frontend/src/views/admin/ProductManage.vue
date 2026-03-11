@@ -1,5 +1,13 @@
 <template>
   <div class="product-manage">
+    
+    <div class="header-actions">
+      <el-button type="success" @click="handleExport" :loading="exportLoading">
+        <el-icon><Download /></el-icon>导出 Excel
+      </el-button>
+    </div>
+
+
     <el-card shadow="hover">
       <div class="toolbar">
         <div class="search-group">
@@ -108,6 +116,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 // 引入 Picture 图标
 import { Check, Close, WarnTriangleFilled, Delete, Search, Picture } from '@element-plus/icons-vue'
 import { getFullImageUrl } from '@/utils/image'
+import { Download } from '@element-plus/icons-vue'
+import { exportExcel } from '@/utils/export'
+
+const exportLoading = ref(false)
+
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -204,6 +217,12 @@ const handleDelete = async (row: any) => {
   } catch (error) {}
 }
 
+const handleExport = async () => {
+  exportLoading.value = true
+  await exportExcel('/api/system/product/export', '商品信息导出.xlsx')
+  exportLoading.value = false
+}
+
 onMounted(() => {
   fetchData()
 })
@@ -241,5 +260,11 @@ onMounted(() => {
   background: #f5f7fa;
   color: #a8abb2;
   font-size: 20px;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 }
 </style>

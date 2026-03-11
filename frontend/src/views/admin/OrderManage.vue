@@ -1,6 +1,13 @@
 
 <template>
   <div class="order-manage">
+
+    <div class="header-actions">
+      <el-button type="success" @click="handleExport" :loading="exportLoading">
+        <el-icon><Download /></el-icon>导出 Excel
+      </el-button>
+    </div>
+
     <el-card shadow="hover">
       <div class="toolbar">
         <div class="search-group">
@@ -84,11 +91,15 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { getSystemOrdersPage, updateSystemOrder } from '@/api/system'
+import { Download } from '@element-plus/icons-vue'
+import { exportExcel } from '@/utils/export'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
+const exportLoading = ref(false)
+
 
 const queryParams = reactive({
   orderNo: '',
@@ -141,6 +152,14 @@ const handleForceCancel = async (row: any) => {
   } catch (error) {}
 }
 
+
+const handleExport = async () => {
+  exportLoading.value = true
+  await exportExcel('/api/system/orders/export', '订单信息导出.xlsx')
+  exportLoading.value = false
+}
+
+
 onMounted(() => {
   fetchData()
 })
@@ -167,5 +186,10 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 }
 </style>

@@ -2,9 +2,11 @@ package com.cjh.backend.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cjh.backend.dto.Category.CategoryExportDto;
 import com.cjh.backend.entity.Category;
 import com.cjh.backend.service.CategoryService;
 import com.cjh.backend.utils.Result;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -98,5 +100,20 @@ public class SystemCategoryController {
         // 实际业务中可能需要判断该分类下是否有商品，这里做基础的删除处理
         boolean removed = categoryService.removeById(id);
         return removed ? Result.success("删除分类成功") : Result.fail("删除失败");
+    }
+
+    /**
+     * 7. 导出数据
+     */
+    @GetMapping("/export")
+    public void exportProducts(HttpServletResponse response) {
+        // 假设已创建 ProductExportDto
+        List<CategoryExportDto> exportList = categoryService.list().stream().map(p -> {
+            CategoryExportDto dto = new CategoryExportDto();
+            org.springframework.beans.BeanUtils.copyProperties(p, dto);
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
+
+        com.cjh.backend.utils.ExcelUtils.export(response, "商品信息导出", "商品列表", exportList, CategoryExportDto.class);
     }
 }

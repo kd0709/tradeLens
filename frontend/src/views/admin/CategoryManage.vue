@@ -1,6 +1,14 @@
 
 <template>
   <div class="category-manage">
+
+    <div class="header-actions">
+      <el-button type="success" @click="handleExport" :loading="exportLoading">
+        <el-icon><Download /></el-icon>导出 Excel
+      </el-button>
+    </div>
+
+
     <el-card shadow="hover">
       <div class="toolbar">
         <el-input
@@ -92,6 +100,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { getSystemCategoryPage, addSystemCategory, updateSystemCategory, deleteSystemCategory } from '@/api/system'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
+import { exportExcel } from '@/utils/export'
+
+
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -106,6 +118,7 @@ const dialogVisible = ref(false)
 const dialogType = ref<'add' | 'edit'>('add')
 const submitLoading = ref(false)
 const formRef = ref()
+const exportLoading = ref(false)
 const formData = reactive({
   id: undefined as number | undefined,
   name: '',
@@ -203,6 +216,12 @@ const resetForm = () => {
   Object.assign(formData, { id: undefined, name: '', level: 1, status: 1 })
 }
 
+const handleExport = async () => {
+  exportLoading.value = true
+  await exportExcel('/api/system/category/export', '分类信息导出.xlsx')
+  exportLoading.value = false
+}
+
 onMounted(() => {
   fetchData()
 })
@@ -224,5 +243,10 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 }
 </style>

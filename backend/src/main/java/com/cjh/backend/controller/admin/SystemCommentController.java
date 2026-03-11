@@ -2,13 +2,17 @@ package com.cjh.backend.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cjh.backend.dto.Comment.CommentExportDto;
 import com.cjh.backend.entity.Comment;
 import com.cjh.backend.service.CommentService;
 import com.cjh.backend.utils.Result;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 后台管理系统 - 评价模块 CRUD 控制器
@@ -76,5 +80,20 @@ public class SystemCommentController {
         log.info("System Admin - 删除违规评价：id={}", id);
         boolean removed = commentService.removeById(id);
         return removed ? Result.success("删除评价成功") : Result.fail("删除失败");
+    }
+
+    /**
+     * 7. 导出数据
+     */
+    @GetMapping("/export")
+    public void exportProducts(HttpServletResponse response) {
+        // 假设已创建 ProductExportDto
+        List<CommentExportDto> exportList = commentService.list().stream().map(p -> {
+            CommentExportDto dto = new CommentExportDto();
+            org.springframework.beans.BeanUtils.copyProperties(p, dto);
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
+
+        com.cjh.backend.utils.ExcelUtils.export(response, "商品信息导出", "商品列表", exportList, CommentExportDto.class);
     }
 }

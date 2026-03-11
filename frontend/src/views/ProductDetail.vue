@@ -126,9 +126,12 @@ import { toggleFavorite } from '@/api/favorite'
 import type { ProductDto } from '@/dto/product'
 import { getFullImageUrl } from '@/utils/image'
 import type { FavoriteToggleDto } from '@/dto/favorite'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+
 const loading = ref(true)
 const product = ref<ProductDto | null>(null)
 const currentImage = ref('')
@@ -158,18 +161,15 @@ const loadDetail = async () => {
       currentImage.value = getFullImageUrl(product.value.images[0])
     }
   } catch (error) {
-    // 商品详情加载失败已由 ElMessage处理
     ElMessage.error('获取商品详情失败')
   } finally {
     loading.value = false
   }
 }
 
-
 const handleBuy = () => {
   if (!product.value) return
   
-  // 检查库存是否充足
   if (product.value.quantity <= 0) {
     showWarning('抱歉，该商品库存不足，无法购买')
     return
@@ -184,7 +184,6 @@ const handleBuy = () => {
 const handleAddToCart = async () => {
   if (!product.value) return
   
-  //检查库存是否充足
   if (product.value.quantity <= 0) {
     showWarning('抱歉，该商品库存不足，无法加入购物车')
     return
@@ -201,7 +200,6 @@ const handleAddToCart = async () => {
     loadingMsg.close()
     showSuccess('成功加入购物车！', 2000)
     
-    // 添加按钮动画效果
     const btn = document.querySelector('.cart-btn')
     if (btn) {
       btn.classList.add('cart-btn-animate')
@@ -229,15 +227,44 @@ const toggleLike = async () => {
     
     showSuccess(serverStatus ? '已添加至收藏夹' : '已取消收藏')
   } catch (error) {
-    // 商品详情加载失败已由 ElMessage处理
     isLiked.value = !isLiked.value 
     showError('操作失败')
   }
 }
 
 const handleChat = () => {
-  showInfo('私信聊天功能正在开发中，敬请期待...')
+  if (!product.value) return
+
+  if (!authStore.isLoggedIn) {
+    showWarning('请先登录后再联系卖家')
+    router.push('/login')
+    return
+  }
+  
+  // 【核心修复】：全面兼容 sellerId 和 userId，并强制转换为数字
+  const targetUserId = Number(product.value.sellerId || product.value.userId)
+
+  // 拦截空值：如果走到这里报错，说明后端商品详情接口根本没有返回卖家的ID！
+  if (!targetUserId || isNaN(targetUserId) || targetUserId <= 0) {
+    showError('无法获取卖家ID，请检查后端详情接口是否返回了 sellerId 或 userId')
+    return
+  }
+
+  if (authStore.user?.id === targetUserId) {
+    showInfo('不能和自己聊天哦')
+    return
+  }
+
+  router.push({ 
+    path: '/messages', 
+    query: { 
+      targetId: targetUserId,
+      nickname: product.value.sellerNickname || '匿名卖家',
+      avatar: product.value.sellerAvatar || ''
+    } 
+  })
 }
+
 onMounted(() => {
   loadDetail()
 })

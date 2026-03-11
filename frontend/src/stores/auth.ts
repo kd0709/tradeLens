@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { UserInfo, LoginRequest, RegisterRequest } from '../dto/auth' 
 import * as authApi from '../api/auth'
+import { useMessageStore } from './message'; // 引入 Message Store
 
 export const useAuthStore = defineStore('auth', () => {
 
@@ -15,6 +16,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = result
     localStorage.setItem('token', result.token)
     localStorage.setItem('user', JSON.stringify(result))
+    
+    // 登录成功后建立 WebSocket 连接
+    const messageStore = useMessageStore();
+    messageStore.connectWs();
   }
 
   async function register(registerData: RegisterRequest) {
@@ -30,6 +35,10 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      
+      // 退出登录时断开 WebSocket 连接
+      const messageStore = useMessageStore();
+      messageStore.disconnectWs();
     }
   }
 

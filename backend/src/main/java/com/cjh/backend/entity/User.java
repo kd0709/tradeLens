@@ -75,4 +75,9 @@ public class User {
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    /**
+     * 信誉分
+     */
+    private Integer creditScore;
 }

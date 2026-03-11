@@ -1,5 +1,6 @@
 package com.cjh.backend.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cjh.backend.dto.*;
 import com.cjh.backend.dto.Product.*;
 import com.cjh.backend.entity.Product;
@@ -32,8 +33,11 @@ public interface ProductService extends IService<Product> {
 
     boolean updateProduct(Long userId, ProductUpdateDto req);
 
-    // 系统管理相关
-    com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.cjh.backend.dto.SystemProductDto> pageSystemProducts(
+    Page<SystemProductDto> pageSystemProducts(
             String keyword, Integer productStatus, Integer page, Integer size);
 
+    Page<ProductListDto> getRecommendProducts(Long userId, Integer page, Integer size);
+
 }
+
+

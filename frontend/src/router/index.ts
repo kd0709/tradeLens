@@ -56,7 +56,12 @@ const router = createRouter({
       component: () => import('../views/Cart.vue'),
       meta: { requiresAuth: true }
     },
-
+    {
+      path: '/messages',
+      name: 'Messages',
+      component: () => import('@/views/Message.vue'),
+      meta: { requiresAuth: true }
+    },
     // 后台管理路由组
     {
       path: '/admin',

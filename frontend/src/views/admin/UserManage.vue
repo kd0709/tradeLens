@@ -1,5 +1,15 @@
 <template>
   <div class="user-manage">
+    
+    <div class="header-actions">
+      <el-button type="success" @click="handleExport" :loading="exportLoading">
+        <el-icon><Download /></el-icon>导出 Excel
+      </el-button>
+    </div>
+
+    <el-table :data="tableData" v-loading="loading" style="width: 100%; margin-top: 20px;">
+    </el-table>
+
     <el-card shadow="hover">
       <div class="toolbar">
         <el-input
@@ -120,6 +130,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { getSystemUserPage, updateSystemUser, deleteSystemUser, addSystemUser } from '@/api/system'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getFullImageUrl } from '@/utils/image'
+import { Download } from '@element-plus/icons-vue'
+import { exportExcel } from '@/utils/export'  
+
 
 // --- 列表数据 ---
 const loading = ref(false)
@@ -136,6 +149,7 @@ const dialogVisible = ref(false)
 const dialogType = ref<'add' | 'edit'>('add')
 const submitLoading = ref(false)
 const formRef = ref()
+const exportLoading = ref(false)
 const formData = reactive({
   id: undefined as number | undefined,
   username: '',
@@ -250,6 +264,12 @@ const resetForm = () => {
   Object.assign(formData, { id: undefined, username: '', password: '', nickname: '', phone: '', role: 0, status: 1 })
 }
 
+const handleExport = async () => {
+  exportLoading.value = true
+  await exportExcel('/api/system/user/export', '用户信息导出.xlsx')
+  exportLoading.value = false
+}
+
 onMounted(() => {
   fetchData()
 })
@@ -271,5 +291,10 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 }
 </style>

@@ -1,6 +1,7 @@
 package com.cjh.backend.controller;// 商品模块开始，新建 ProductController.java
 
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cjh.backend.dto.*;
 import com.cjh.backend.dto.Product.*;
 import com.cjh.backend.service.ProductService;
@@ -161,5 +162,16 @@ public class ProductController {
             log.error("用户 {} 编辑商品异常", userId, e);
             return Result.fail("编辑商品失败");
         }
+    }
+
+    @GetMapping("/recommend")
+    public Result<Page<ProductListDto>> getRecommend(
+            @CurrentUser Long userId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size) {
+
+        // 调用我们刚刚编写的个性化综合打分推荐算法
+        Page<ProductListDto> resultPage = productService.getRecommendProducts(userId, page, size);
+        return Result.success(resultPage);
     }
 }

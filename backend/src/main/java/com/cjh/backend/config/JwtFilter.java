@@ -40,7 +40,11 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        if (path.startsWith("/api/auth/") || path.equals("/error") || path.startsWith("/images/") || path.equals("/api/alipay/notify")) {
+        if (path.startsWith("/api/auth/")
+                || path.equals("/error")
+                || path.startsWith("/images/")
+                || path.equals("/api/alipay/notify")
+                || path.startsWith("/api/ws/")){
             filterChain.doFilter(request, response);
             return;
         }
