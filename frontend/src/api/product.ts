@@ -44,3 +44,7 @@ export function getProductDetail(id: number): Promise<ProductDto> {
 export function updateProduct(data: ProductUpdateDto): Promise<void> {
   return request.put('/api/product', data)
 }
+
+export const getRecommendProducts = (limit: number = 10) => {
+  return request.get('/api/product/recommend', { params: { limit } })
+}

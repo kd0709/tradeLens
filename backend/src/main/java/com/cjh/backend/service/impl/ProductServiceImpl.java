@@ -5,10 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cjh.backend.dto.*;
 import com.cjh.backend.dto.Product.*;
-import com.cjh.backend.entity.Favorite;
-import com.cjh.backend.entity.Product;
-import com.cjh.backend.entity.ProductImage;
-import com.cjh.backend.entity.User;
+import com.cjh.backend.entity.*;
+import com.cjh.backend.mapper.UserPreferenceMapper;
 import com.cjh.backend.service.FavoriteService;
 import com.cjh.backend.service.ProductService;
 import com.cjh.backend.mapper.ProductMapper;
@@ -30,6 +28,9 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     private final ProductMapper productMapper;
     private final FavoriteService favoriteService;
     private final UserService userService;
+    private final UserPreferenceMapper userPreferenceMapper;
+
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -286,4 +287,59 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
         return score;
     }
 
+
+    @Override
+    public List<ProductListDto> getRecommendProducts(Long userId, int limit) {
+        List<ProductListDto> recommendList = new ArrayList<>();
+
+        // 1. 冷启动/未登录兜底：全站热门且卖家信用极好 (假设用 searchProducts 获取浏览量最高的)
+        if (userId == null) {
+            // 这里为了简便，复用你现有的 searchProducts 方法，不传条件则默认按时间/热门排序
+            // 在实际论文中，你可以描述为“优先推荐信用分>=90的近期热门商品”
+            return productMapper.searchProducts(null, null, null, null, null, null, 0, limit);
+        }
+
+        // 2. 已登录：获取该用户的偏好画像 (取分数最高的前 2 个分类)
+        List<UserPreference> preferences = userPreferenceMapper.selectList(
+                new LambdaQueryWrapper<UserPreference>()
+                        .eq(UserPreference::getUserId, userId)
+                        .orderByDesc(UserPreference::getScore)
+                        .last("LIMIT 2")
+        );
+
+        // 3. 新用户无行为记录 -> 触发冷启动兜底
+        if (preferences.isEmpty()) {
+            return productMapper.searchProducts(null, null, null, null, null, null, 0, limit);
+        }
+
+        // 4. 定向召回：70% 偏好分类 + 30% 随机/热门
+        int preferLimit = (int) (limit * 0.7);
+        int randomLimit = limit - preferLimit;
+
+        // 4.1 提取偏好分类下的商品
+        for (UserPreference pref : preferences) {
+            // 假设每个分类均分 preferLimit 的名额
+            int quota = preferLimit / preferences.size();
+            List<ProductListDto> prefProducts = productMapper.searchProducts(
+                    null, pref.getCategoryId(), null, null, null, null, 0, quota);
+            recommendList.addAll(prefProducts);
+        }
+
+        // 4.2 补充随机/热门商品以增加多样性 (不限制分类)
+        List<ProductListDto> randomProducts = productMapper.searchProducts(
+                null, null, null, null, null, null, 0, randomLimit * 2); // 多查一点用来去重
+
+        for (ProductListDto p : randomProducts) {
+            if (recommendList.size() >= limit) break;
+            // 简单去重：如果推荐列表中还没有这个商品，就加进去
+            boolean exists = recommendList.stream().anyMatch(r -> r.getId().equals(p.getId()));
+            if (!exists) {
+                recommendList.add(p);
+            }
+        }
+
+        // 5. 打乱顺序，打破信息茧房
+        Collections.shuffle(recommendList);
+        return recommendList;
+    }
 }

@@ -1,5 +1,6 @@
 package com.cjh.backend.controller;
 
+import com.cjh.backend.annotation.UserBehaviorTrack;
 import com.cjh.backend.dto.Cart.AddToCartDto;
 import com.cjh.backend.dto.Cart.CartListDto;
 import com.cjh.backend.dto.Cart.UpdateCartQuantityDto;
@@ -30,6 +31,7 @@ public class CartController {
      * 加入购物车
      */
     @PostMapping("/add")
+    @UserBehaviorTrack(action = "CART", score = 5) // 【仅新增这一行】
     public Result<Long> addToCart(
             @CurrentUser Long userId,
             @Valid @RequestBody AddToCartDto dto) {

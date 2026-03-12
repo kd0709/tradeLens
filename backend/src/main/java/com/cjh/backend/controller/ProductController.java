@@ -1,7 +1,7 @@
-package com.cjh.backend.controller;// 商品模块开始，新建 ProductController.java
-
+package com.cjh.backend.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cjh.backend.annotation.UserBehaviorTrack;
 import com.cjh.backend.dto.*;
 import com.cjh.backend.dto.Product.*;
 import com.cjh.backend.service.ProductService;
@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -124,6 +125,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @UserBehaviorTrack(action = "VIEW", score = 1)
     public Result<ProductDetailDto> getProductDetail(
             @PathVariable("id") Long productId,
             @CurrentUser Long currentUserId) {  // currentUserId 可为 null（未登录）
@@ -164,14 +166,14 @@ public class ProductController {
         }
     }
 
+    /**
+     * 首页猜你喜欢推荐
+     */
     @GetMapping("/recommend")
-    public Result<Page<ProductListDto>> getRecommend(
-            @CurrentUser Long userId,
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-
-        // 调用我们刚刚编写的个性化综合打分推荐算法
-        Page<ProductListDto> resultPage = productService.getRecommendProducts(userId, page, size);
-        return Result.success(resultPage);
+    public Result<List<ProductListDto>> getRecommend(@CurrentUser Long userId,
+                                                     @RequestParam(defaultValue = "10") Integer limit) {
+        List<ProductListDto> list = productService.getRecommendProducts(userId, limit);
+        return Result.success(list);
     }
+
 }

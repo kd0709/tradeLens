@@ -7,6 +7,7 @@ import com.cjh.backend.entity.Product;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
 * @author 45209
@@ -38,6 +39,8 @@ public interface ProductService extends IService<Product> {
 
     Page<ProductListDto> getRecommendProducts(Long userId, Integer page, Integer size);
 
+
+    List<ProductListDto> getRecommendProducts(Long userId, int limit);
 }
 
 

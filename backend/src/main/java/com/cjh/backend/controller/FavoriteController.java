@@ -1,6 +1,7 @@
 package com.cjh.backend.controller;
 
 
+import com.cjh.backend.annotation.UserBehaviorTrack;
 import com.cjh.backend.dto.Favorite.FavoriteListDto;
 import com.cjh.backend.dto.Favorite.FavoriteToggleDto;
 import com.cjh.backend.service.FavoriteService;
@@ -26,6 +27,7 @@ public class FavoriteController {
     private final FavoriteService favoriteService;
 
     @PostMapping("/toggle")
+    @UserBehaviorTrack(action = "FAVORITE", score = 3) // 【仅新增这一行】
     public Result<Boolean> toggleFavorite(
             @CurrentUser Long userId,
             @Valid @RequestBody FavoriteToggleDto dto) {

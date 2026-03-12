@@ -62,6 +62,49 @@
       </div>
     </div>
 
+    <div class="container recommend-section" v-if="!queryParams.keyword && (!queryParams.categoryId || queryParams.categoryId === 0)">
+      <div class="section-header">
+        <h2>💖 猜你喜欢</h2>
+        <span class="subtitle">根据您的偏好智能推荐</span>
+        <el-button type="primary" link @click="refreshRecommend" :loading="recommendStore.loading">
+          <el-icon><Refresh /></el-icon> 换一批
+        </el-button>
+      </div>
+      
+      <div class="product-grid" v-loading="recommendStore.loading">
+        <div 
+          v-for="item in recommendStore.recommendList" 
+          :key="'rec-' + item.id" 
+          class="product-card"
+          @click="goToDetail(item)"
+        >
+          <div class="image-wrapper">
+            <img :src="getFullImageUrl(item.mainImage)" :alt="item.title" loading="lazy" />
+            <div class="condition-tag" v-if="item.conditionLevel">
+              {{ getConditionText(item.conditionLevel) }}
+            </div>
+          </div>
+          <div class="info">
+            <h3 class="title">{{ item.title }}</h3>
+            <div class="price-row">
+              <span class="currency">¥</span>
+              <span class="price">{{ item.price }}</span>
+              <span class="view-count">{{ item.viewCount }}人看过</span>
+            </div>
+            <div class="seller-row">
+              <el-avatar :size="20" :src="getFullImageUrl(item.sellerAvatar) || defaultAvatar" />
+              <span class="name">{{ item.sellerNickname || '匿名' }}</span>
+              <span class="time">{{ formatTime(item.createTime) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container section-header" style="margin-top: 24px;" v-if="!queryParams.keyword && (!queryParams.categoryId || queryParams.categoryId === 0)">
+      <h2 style="color: #4b5563;">🛒 市场大盘</h2>
+    </div>
+
     <div class="container product-grid" v-loading="loading" element-loading-text="加载中..." element-loading-background="rgba(255, 255, 255, 0.6)">
       <div 
         v-for="item in productList" 
@@ -119,18 +162,23 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, onActivated, onDeactivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { CaretTop, CaretBottom, DCaret } from '@element-plus/icons-vue'
+// 【新增】：引入 Refresh 图标
+import { CaretTop, CaretBottom, DCaret, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 import { getProductList } from '@/api/product'
 import { getCategoryList } from '@/api/category'
 import { getFullImageUrl } from '@/utils/image' 
 import type { ProductQuery } from '@/dto/product'
+// 【新增】：引入推荐 Store
+import { useRecommendStore } from '@/stores/recommend'
 
 defineOptions({ name: 'Home' })
 
 const router = useRouter()
 const route = useRoute()
+// 【新增】：实例化 store
+const recommendStore = useRecommendStore()
 
 const loading = ref(false)
 const productList = ref<any[]>([]) 
@@ -139,9 +187,7 @@ const categories = ref<Array<{ id: number; name: string }>>([{ id: 0, name: '全
 const isSticky = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-// 标题高亮缓存，避免同一批次渲染重复进行正则替换
 const highlightedTitleCache = new Map<string, string>()
-
 const savedScrollY = ref(0)
 
 const banners = ref<any[]>([
@@ -160,6 +206,11 @@ const queryParams = reactive<ProductQuery>({
   sort: undefined
 })
 
+// 【新增】：手动刷新推荐
+const refreshRecommend = () => {
+  recommendStore.fetchRecommendations(true) // 传 true 强制跳过缓存
+}
+
 const loadCategories = async () => {
   try {
     const catList = await getCategoryList()
@@ -171,7 +222,7 @@ const loadCategories = async () => {
 }
 
 const loadData = async () => {
-  if (loading.value) return // 防止重复并发请求
+  if (loading.value) return 
   loading.value = true
   try {
     const params: any = {
@@ -253,11 +304,9 @@ const formatTime = (timeStr: string) => {
 
 const highlightKeyword = (title: string) => {
   if (!queryParams.keyword) return title
-
   const cacheKey = `${queryParams.keyword}::${title}`
   const cachedValue = highlightedTitleCache.get(cacheKey)
   if (cachedValue) return cachedValue
-
 
   const safeKeyword = queryParams.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const reg = new RegExp(safeKeyword, 'gi')
@@ -276,9 +325,6 @@ watch(() => route.query.q, (newVal) => {
   loadData()
 })
 
-/**
- * 首次进入页面执行数据初始化
- */
 onMounted(async () => {
   if (route.query.from === 'alipay') {
     ElMessage.success('支付成功')
@@ -292,27 +338,52 @@ onMounted(async () => {
   }
 
   await loadCategories()
+  
+  // 【新增】：加载推荐数据（自带 5 分钟缓冲检测）
+  recommendStore.fetchRecommendations()
+  
   await loadData()
 })
 
-/**
- * KeepAlive 生命周期钩子：从详情页返回时触发
- */
 onActivated(() => {
-  // 恢复之前记录的滚动位置，使用 behavior: instant 确保瞬间恢复不卡顿
   window.scrollTo({ top: savedScrollY.value, behavior: 'instant' })
 })
 
-/**
- * KeepAlive 生命周期钩子：进入详情页时触发
- */
 onDeactivated(() => {
-  // 记录当前的滚动条坐标
   savedScrollY.value = window.scrollY
 })
 </script>
 
 <style scoped lang="scss">
+/* --- 新增的推荐区样式 --- */
+.recommend-section {
+  margin-top: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(239, 68, 68, 0.1);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 20px;
+  
+  h2 {
+    margin: 0;
+    color: #ef4444;
+    font-size: 22px;
+    font-weight: bold;
+  }
+  .subtitle {
+    margin-left: 12px;
+    color: #9ca3af;
+    font-size: 14px;
+    flex-grow: 1;
+  }
+}
+/* ------------------------ */
+
 .home-page {
   background-color: #f9fafb;
   min-height: 100vh;
@@ -339,8 +410,6 @@ onDeactivated(() => {
     filter: blur(60px);
     opacity: 0.6;
     z-index: 0;
-    
-    // 性能优化：开启 GPU 渲染，避免模糊背景拖慢滚动
     pointer-events: none;
     transform: translateZ(0); 
     will-change: transform;
