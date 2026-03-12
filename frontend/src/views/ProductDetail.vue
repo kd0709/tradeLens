@@ -61,8 +61,19 @@
             <div class="seller-card">
               <el-avatar :size="50" :src="getFullImageUrl(product.sellerAvatar)" />
               <div class="seller-info">
-                <div class="name">{{ product.sellerNickname || '匿名卖家' }}</div>
-                <div class="desc">信用极好 · 回复快</div>
+                <div class="name">
+                  {{ product.sellerNickname || '匿名卖家' }}
+                  <el-tag 
+                    size="small" 
+                    :type="product.sellerCreditScore >= 90 ? 'success' : (product.sellerCreditScore >= 80 ? 'warning' : 'danger')" 
+                    style="margin-left: 8px;"
+                  >
+                    信用分: {{ product.sellerCreditScore || 100 }}
+                  </el-tag>
+                </div>
+                <div class="desc" v-if="product.sellerCreditScore >= 90">信用极好 · 放心交易</div>
+                <div class="desc" v-else-if="product.sellerCreditScore >= 80">信用良好</div>
+                <div class="desc" v-else style="color: #f56c6c;">该卖家近期存在违规，请谨慎交易</div>
               </div>
               <el-button round size="small" @click="handleChat">私 聊</el-button>
             </div>

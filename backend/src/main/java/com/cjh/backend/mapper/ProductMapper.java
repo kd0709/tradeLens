@@ -104,7 +104,8 @@ public interface ProductMapper extends BaseMapper<Product> {
         
         p.user_id AS sellerId,
         u.nickname AS sellerNickname,
-        u.avatar AS sellerAvatar
+        u.avatar AS sellerAvatar,
+        u.credit_score AS sellerCreditScore
     FROM tradelens.product p
     INNER JOIN tradelens.user u ON p.user_id = u.id
     WHERE p.id = #{productId}

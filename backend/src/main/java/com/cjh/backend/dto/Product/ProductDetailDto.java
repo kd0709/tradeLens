@@ -32,5 +32,5 @@ public class ProductDetailDto {
     // 当前用户是否收藏（未登录为 false）
     private Boolean isFavorited;
 
-    // 可选：分类名称、卖家其他商品数等
+    private Integer sellerCreditScore;
 }

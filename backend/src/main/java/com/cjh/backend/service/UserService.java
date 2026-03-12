@@ -20,4 +20,6 @@ public interface UserService extends IService<User> {
     void updatePassword(Long userId, String oldPassword, String newPassword);
 
     SellerInfoDto getSellerInfo(Long sellerId);
+
+    void changeCreditScore(Long userId, int score, String reason);
 }
