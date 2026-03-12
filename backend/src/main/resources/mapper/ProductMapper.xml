@@ -126,16 +126,14 @@
         p.title,
         p.price,
         p.condition_level AS conditionLevel,
-        (SELECT image_url FROM product_image WHERE product_id = p.id AND is_main = 1 LIMIT 1) AS mainImage,
-
+        p.create_time AS createTime,
+        p.user_id AS sellerId,
         u.nickname AS sellerNickname,
         u.avatar AS sellerAvatar,
-        p.view_count AS viewCount,
-        p.create_time AS createTime
-        FROM product p
-        INNER JOIN user u ON p.user_id = u.id
-        WHERE p.is_deleted = 0
-        AND p.product_status = 2   <!-- 只显示已上架的 -->
+        u.credit_score AS sellerCreditScore  FROM tradelens.product p
+        LEFT JOIN tradelens.user u ON p.user_id = u.id
+        WHERE p.product_status = 2 AND p.is_deleted = 0
+
         <if test="keyword != null and keyword != ''">
             AND p.title LIKE CONCAT('%', #{keyword}, '%')
         </if>
@@ -151,12 +149,21 @@
         <if test="condition != null">
             AND p.condition_level = #{condition}
         </if>
-        ORDER BY
+
+        ORDER BY IF(u.credit_score >= 80, 1, 0) DESC,
+
         <choose>
-            <when test="sort == 'price_asc'">p.price ASC</when>
-            <when test="sort == 'price_desc'">p.price DESC</when>
-            <otherwise>p.create_time DESC</otherwise>  <!-- 默认按时间降序 -->
+            <when test="sort == 'price_asc'">
+                p.price ASC
+            </when>
+            <when test="sort == 'price_desc'">
+                p.price DESC
+            </when>
+            <otherwise>
+                p.create_time DESC
+            </otherwise>
         </choose>
+
         LIMIT #{offset}, #{size}
     </select>
 

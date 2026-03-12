@@ -104,6 +104,12 @@ const router = createRouter({
           name: 'AdminComments',
           component: () => import('@/views/admin/CommentManage.vue'),
           meta: { title: '评价管理' }
+        },
+        {
+          path: 'audit',
+          name: 'ProductAudit',
+          component: () => import('@/views/admin/ProductAudit.vue'),
+          meta: { title: '商品审核中心' }
         }
       ]
     }

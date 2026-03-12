@@ -2,14 +2,15 @@ package com.cjh.backend.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cjh.backend.dto.Product.AuditDto;
 import com.cjh.backend.dto.Product.ProductExportDto;
 import com.cjh.backend.dto.SystemProductDto;
 import com.cjh.backend.entity.Product;
+import com.cjh.backend.service.UserService;
 import com.cjh.backend.service.impl.EmailService;
 import com.cjh.backend.service.ProductService;
 import com.cjh.backend.utils.Result;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -27,13 +28,9 @@ public class SystemProductController {
 
     private final ProductService productService;
     private final EmailService emailService;
+    private final UserService userService; // 注入 UserService
 
-    @Data
-    public static class AuditDto {
-        private Long productId;
-        private Boolean pass;
-        private String reason;
-    }
+
 
     /**
      * 1. 分页查询所有商品
@@ -109,9 +106,11 @@ public class SystemProductController {
                 return Result.success("审核通过，已上架并通知用户");
             }
         } else {
-            product.setProductStatus(3); // 拒绝
+            product.setProductStatus(3); // 拒绝/下架
             if (productService.updateById(product)) {
-                return Result.success("审核已拒绝");
+                // 【核心联动】：商品被违规驳回/下架，扣除卖家 5 分信用分！
+                userService.changeCreditScore(product.getUserId(), -5, "商品违规被驳回或强制下架，商品ID: " + product.getId());
+                return Result.success("审核已拒绝，并已扣除卖家信用分");
             }
         }
         return Result.fail("审核操作失败");

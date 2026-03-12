@@ -8,10 +8,13 @@ import com.cjh.backend.entity.User;
 import com.cjh.backend.service.UserService;
 import com.cjh.backend.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
@@ -68,5 +71,35 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public SellerInfoDto getSellerInfo(Long sellerId) {
         return userMapper.getSellerInfoById(sellerId);
+    }
+
+
+
+    /**
+     * 变更用户信用分
+     * @param userId 用户ID
+     * @param score 变动分数 (正数为加分，负数为扣分)
+     * @param reason 变动原因 (可用于记录日志)
+     */
+    @Override
+    public void changeCreditScore(Long userId, int score, String reason) {
+        User user = this.getById(userId);
+        if (user == null) return;
+
+        int newScore = user.getCreditScore() + score;
+        // 限制最高 120 分，最低 0 分
+        if (newScore > 120) newScore = 120;
+        if (newScore < 0) newScore = 0;
+
+        user.setCreditScore(newScore);
+
+         //如果分数低于 30 分，可以触发账号异常状态（例如 status = 0 限制发布）
+         if (newScore < 30) {
+             user.setStatus(0); // 假设 0 为限制状态
+         }
+
+        this.updateById(user);
+
+        log.info("用户 {} 信用分变动: {}, 当前分数: {}, 原因: {}", userId, score, newScore, reason);
     }
 }

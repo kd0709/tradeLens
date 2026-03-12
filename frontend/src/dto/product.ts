@@ -15,6 +15,7 @@ export interface ProductDto {
   sellerNickname?: string
   createTime: string
   isLiked?: boolean 
+  sellerCreditScore: number
 }
 
 // 发布商品 DTO
