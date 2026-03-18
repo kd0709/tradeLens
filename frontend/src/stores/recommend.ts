@@ -9,6 +9,7 @@ export const useRecommendStore = defineStore('recommend', () => {
 
   const fetchRecommendations = async (force: boolean = false) => {
     const now = Date.now()
+    
     // 如果不强制刷新，且缓存未超过 5 分钟，直接使用缓存
     if (!force && recommendList.value.length > 0 && (now - lastFetchTime.value < 300000)) {
       console.log('命中个性化推荐缓存')
@@ -18,6 +19,9 @@ export const useRecommendStore = defineStore('recommend', () => {
     loading.value = true
     try {
       const res: any = await getRecommendProducts(10)
+
+      console.log('获取推荐商品成功', res)
+
       recommendList.value = res || []
       lastFetchTime.value = now
     } catch (error) {

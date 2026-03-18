@@ -72,7 +72,7 @@
       </div>
       
       <div class="product-grid" v-loading="recommendStore.loading">
-        <div 
+         <div 
           v-for="item in recommendStore.recommendList" 
           :key="'rec-' + item.id" 
           class="product-card"
@@ -236,6 +236,9 @@ const loadData = async () => {
     }
     
     const res = await getProductList(params)
+
+    console.log('加载商品列表，参数：', params, '返回：', res)
+    
     productList.value = res.list || [] 
     total.value = Number(res.total) || 0
   } catch (error) {
