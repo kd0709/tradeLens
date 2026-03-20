@@ -1,19 +1,18 @@
 package com.cjh.backend.controller;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.cjh.backend.annotation.ApiLog;
 import com.cjh.backend.common.CurrentUser;
-import com.cjh.backend.dto.UploadDto;
 import com.cjh.backend.service.impl.AiRecognitionService;
 import com.cjh.backend.service.FileStorageService;
 import com.cjh.backend.utils.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -24,56 +23,34 @@ public class CommonController {
     private final FileStorageService fileStorageService;
     private final AiRecognitionService aiRecognitionService;
 
-    // 注入配置文件中定义的本地存储基路径
-    @Value("${file.upload-dir}")
-    private String uploadPath;
 
     /**
      * 通用上传接口
      */
     @PostMapping("/upload")
-    public Result<UploadDto> upload(
-            @RequestPart("file") MultipartFile file,
-            @CurrentUser Long userId) {
+    @ApiLog("上传文件到MinIO")
+    public Result<Map<String, String>> upload(@RequestParam("file") MultipartFile file) {
+        String url = fileStorageService.upload(file);
 
-        try {
-            // 上传文件并获取保存后的相对文件名或URL
-            String url = fileStorageService.upload(file);
-
-            UploadDto resp = new UploadDto();
-            resp.setUrl(url);
-            resp.setOriginalName(file.getOriginalFilename());
-            resp.setSize(file.getSize());
-
-            return Result.success(resp, "上传成功");
-        } catch (Exception e) {
-            log.error("用户 {} 上传失败", userId, e);
-            return Result.fail(500, "上传失败：" + e.getMessage());
-        }
+        Map<String, String> data = new HashMap<>();
+        data.put("url", url);
+        return Result.success(data);
     }
 
     /**
      * AI 智能填表接口
-     * 修改重点：将前端传来的 URL 转换为后端磁盘的绝对路径
      */
     @GetMapping("/ai/fill-form")
+    @ApiLog("AI智能识别商品")
     public Result<JSONObject> aiFillForm(
             @CurrentUser Long userId,
             @RequestParam("imageUrl") String imageUrl) {
 
         try {
-
-            // 只取文件名，防止目录穿透
-            String fileName = new File(imageUrl).getName();
-            String physicalPath = uploadPath + File.separator + fileName;
-
-            File imageFile = new File(physicalPath);
-            if (!imageFile.exists()) {
-                return Result.fail(404, "图片不存在");
-            }
-
-            JSONObject formJson = aiRecognitionService
-                    .recognizeProductAndFillForm(physicalPath);
+            // 核心修改：不再去本地磁盘找文件。
+            // 既然前端传过来的是 MinIO 的网络 URL (http://...)，我们直接把这个 URL 传给大模型即可。
+            // 阿里千问(Qwen)等现代大模型 API 原生支持直接读取网络 URL 进行图像识别。
+            JSONObject formJson = aiRecognitionService.recognizeProductAndFillForm(imageUrl);
 
             return Result.success(formJson);
 

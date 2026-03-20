@@ -11,8 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.*;
 
 @Slf4j
@@ -22,16 +23,10 @@ public class AiRecognitionService {
     @Value("${alibaba.dashscope.api-key}")
     private String apiKey;
 
-    public JSONObject recognizeProductAndFillForm(String imagePath) {
+    public JSONObject recognizeProductAndFillForm(String imageUrl) {
         try {
-
-            File file = new File(imagePath);
-            if (!file.exists()) {
-                throw new RuntimeException("图片文件不存在");
-            }
-
-            // 1️⃣ 读取文件转 Base64
-            String base64Image = encodeToBase64(file);
+            // 1️⃣ 核心修改：通过网络 URL 将 MinIO 的图片下载到内存并转为 Base64
+            String base64Image = downloadImageToBase64(imageUrl);
 
             MultiModalConversation conv = new MultiModalConversation();
 
@@ -76,6 +71,22 @@ public class AiRecognitionService {
         }
     }
 
+    /**
+     * 根据网络 URL 下载图片流并转为 Base64
+     */
+    private String downloadImageToBase64(String imageUrl) throws Exception {
+        URL url = new URL(imageUrl);
+        try (InputStream is = url.openStream();
+             ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = is.read(buffer)) != -1) {
+                os.write(buffer, 0, length);
+            }
+            return Base64.getEncoder().encodeToString(os.toByteArray());
+        }
+    }
+
     // 提取 text 内容（更安全）
     private String extractText(MultiModalConversationResult result) {
         List<?> contents = result.getOutput()
@@ -92,15 +103,6 @@ public class AiRecognitionService {
                         .trim();
             }
         }
-
         throw new RuntimeException("AI未返回文本内容");
-    }
-
-    // 文件转 Base64
-    private String encodeToBase64(File file) throws Exception {
-        FileInputStream fis = new FileInputStream(file);
-        byte[] bytes = fis.readAllBytes();
-        fis.close();
-        return Base64.getEncoder().encodeToString(bytes);
     }
 }

@@ -40,9 +40,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
+        // 提示：既然已经重构到 MinIO，这里的 /images/ 白名单可能不再需要了，看你业务决定是否删掉
         if (path.startsWith("/api/auth/")
                 || path.equals("/error")
-                || path.startsWith("/images/")
                 || path.equals("/api/alipay/notify")
                 || path.startsWith("/api/ws/")){
             filterChain.doFilter(request, response);
@@ -57,13 +57,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
 
-        if (!jwtUtil.validateToken(token)) {
-            writeErrorResponse(response, 401, "Token 无效或已过期");
+        // ============================================
+        // 核心重构区：先拦截已经被主动废弃的 Token
+        // ============================================
+        if (tokenBlacklist.contains(token)) {
+            writeErrorResponse(response, 401, "Token 已失效，请重新登录");
             return;
         }
 
-        if (tokenBlacklist.isBlacklisted(token)) {
-            writeErrorResponse(response, 401, "Token 已失效，请重新登录");
+        // ============================================
+        // 通过安检后，再去验证签名和是否自然过期
+        // ============================================
+        if (!jwtUtil.validateToken(token)) {
+            writeErrorResponse(response, 401, "Token 无效或已过期");
             return;
         }
 
@@ -80,5 +86,4 @@ public class JwtFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-
 }

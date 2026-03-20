@@ -1,5 +1,6 @@
 package com.cjh.backend.service.impl;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -11,14 +12,19 @@ import com.cjh.backend.service.FavoriteService;
 import com.cjh.backend.service.ProductService;
 import com.cjh.backend.mapper.ProductMapper;
 import com.cjh.backend.service.UserService;
+import com.cjh.backend.utils.RedisUtils;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RBloomFilter;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +35,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
     private final FavoriteService favoriteService;
     private final UserService userService;
     private final UserPreferenceMapper userPreferenceMapper;
+    private final RedisUtils redisUtils;
+    private final RedissonClient redissonClient;
 
+    private static final String PRODUCT_DETAIL_PREFIX = "tradelens:product:detail:";
+    private static final String PRODUCT_BLOOM_KEY = "tradelens:product:bloom";
 
 
     @Override
@@ -55,9 +65,15 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
                 productMapper.insertProductImage(image);
             }
         }
+
+        // ==========================================
+        // 核心重构：发布成功后，将新生成的 ID 加入布隆过滤器
+        // ==========================================
+        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(PRODUCT_BLOOM_KEY);
+        bloomFilter.add(productId);
+
         return productId;
     }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateProductStatus(Long userId, ProductStatusUpdateDto req) {
@@ -117,14 +133,37 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product>
 
     @Override
     public ProductDetailDto getProductDetail(Long productId, Long currentUserId) {
-        ProductDetailDto detail = productMapper.getProductDetailById(productId);
-        if (detail == null) {
+        // 1. 【第一道防线】布隆过滤器拦截恶意/无效请求
+        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(PRODUCT_BLOOM_KEY);
+        if (!bloomFilter.contains(productId)) {
+            // 布隆说没有，那就一定没有，直接返回 null 或抛异常
             return null;
         }
+        // 2. 【第二道防线】查询 Redis 缓存
+        String cacheKey = PRODUCT_DETAIL_PREFIX + productId;
+        ProductDetailDto detail;
+        Object cachedData = redisUtils.get(cacheKey);
+        if (cachedData != null) {
+            // 命中缓存，反序列化
+            detail = JSON.parseObject(JSON.toJSONString(cachedData), ProductDetailDto.class);
+        } else {
+            // 3. 【第三道防线】未命中缓存，查询 MySQL
+            detail = productMapper.getProductDetailById(productId);
+            if (detail == null) {
+                return null; // 极小概率的布隆过滤器误判，防底
+            }
 
-        List<String> imageUrls = productMapper.getProductImageUrls(productId);
-        detail.setImages(imageUrls);
+            // 查出图片并塞入 detail
+            List<String> imageUrls = productMapper.getProductImageUrls(productId);
+            detail.setImages(imageUrls);
 
+            // 4. 将查到的【公共基础数据】写入 Redis
+            // 加随机过期时间 (1小时基础 + 0~10分钟随机抖动)，防止缓存雪崩
+            long expireTime = 3600L + ThreadLocalRandom.current().nextLong(600);
+            redisUtils.set(cacheKey, detail, expireTime);
+        }
+
+        // 5. 【千古避坑点】动态拼装用户私有状态 (这一步绝不参与上面的 Redis 缓存)
         boolean isFavorited = currentUserId != null && productMapper.isFavorited(currentUserId, productId);
         detail.setIsFavorited(isFavorited);
 

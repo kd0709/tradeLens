@@ -5,6 +5,8 @@ import com.cjh.backend.dto.Auth.LoginRequest;
 import com.cjh.backend.dto.Auth.RegisterRequest;
 import com.cjh.backend.dto.User.UserInfoDto;
 import com.cjh.backend.service.AuthService;
+import com.cjh.backend.service.UserService;
+import com.cjh.backend.utils.JwtUtil;
 import com.cjh.backend.utils.Result;
 import com.cjh.backend.utils.TokenBlacklist;
 import jakarta.validation.Valid;
@@ -22,6 +24,8 @@ public class AuthController {
 
     private final AuthService authService;
     private final TokenBlacklist tokenBlacklist;
+    private final JwtUtil jwtUtil;
+
 
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
@@ -50,17 +54,32 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public Result<Void> logout() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
+    public Result<Void> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return Result.fail("未登录或 token 无效");
         }
-        Object credentials = auth.getCredentials();
-        if (credentials instanceof String token) {
-            tokenBlacklist.addToBlacklist(token);
-        } else {
-            return Result.fail("无法获取 token");
+
+        String token = authHeader.substring(7);
+
+        try {
+            // 1. 获取这个 Token 本来的过期时间点
+            long expirationTime = jwtUtil.extractAllClaims(token).getExpiration().getTime();
+            long now = System.currentTimeMillis();
+
+            // 2. 计算距离现在还剩多少秒过期
+            long remainSeconds = (expirationTime - now) / 1000;
+
+            // 3. 将它打入黑名单，设置精确的倒计时
+            if (remainSeconds > 0) {
+                tokenBlacklist.addToBlacklist(token, remainSeconds);
+                log.info("用户主动登出，Token已入黑名单，剩余 {} 秒", remainSeconds);
+            }
+        } catch (Exception e) {
+            log.warn("登出时 Token 已过期或非法: {}", e.getMessage());
         }
+
+        // 4. 清理 Spring Security 上下文
+        SecurityContextHolder.clearContext();
         return Result.success("成功登出");
     }
 }
