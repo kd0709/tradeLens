@@ -1,5 +1,6 @@
 package com.cjh.backend.common;
 
+import com.cjh.backend.annotation.CurrentUser;
 import com.cjh.backend.exception.BusinessException;
 import com.cjh.backend.exception.ErrorConstants;
 import org.springframework.core.MethodParameter;

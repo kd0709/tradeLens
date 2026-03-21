@@ -3,7 +3,7 @@ package com.cjh.backend.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.cjh.backend.common.CurrentUser;
+import com.cjh.backend.annotation.CurrentUser;
 import com.cjh.backend.dto.Orders.CreateOrderDto;
 import com.cjh.backend.dto.Orders.OrderDetailDto;
 import com.cjh.backend.dto.Orders.OrderListDto;

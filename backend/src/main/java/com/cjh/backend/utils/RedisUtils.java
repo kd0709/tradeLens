@@ -1,93 +1,97 @@
 package com.cjh.backend.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 完整的企业级 Redis 工具类
+ * Redis 工具类（增强版）
+ * 特点：
+ * 1. 支持泛型
+ * 2. 支持自增/自减
+ * 3. 支持过期时间查询
+ * 4. 支持分布式锁（简单版）
+ * 5. 日志规范
  */
+@Slf4j
 @Component
 public class RedisUtils {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    // ============================= Common (通用操作) =============================
+    // ============================= Common =============================
 
-    /**
-     * 指定缓存失效时间
-     */
     public boolean expire(String key, long time) {
         try {
             if (time > 0) {
-                redisTemplate.expire(key, time, TimeUnit.SECONDS);
+                return Boolean.TRUE.equals(redisTemplate.expire(key, time, TimeUnit.SECONDS));
             }
-            return true;
+            return false;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("设置过期时间失败 key={}", key, e);
             return false;
         }
     }
 
-    /**
-     * 判断key是否存在
-     */
+    public long getExpire(String key) {
+        try {
+            Long expire = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+            return expire == null ? -1 : expire;
+        } catch (Exception e) {
+            log.error("获取过期时间失败 key={}", key, e);
+            return -1;
+        }
+    }
+
     public boolean hasKey(String key) {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(key));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("判断key是否存在失败 key={}", key, e);
             return false;
         }
     }
 
-    /**
-     * 删除缓存 (支持传一个或多个key)
-     */
-    public void del(String... key) {
-        if (key != null && key.length > 0) {
-            if (key.length == 1) {
-                // 删除单个 Key
-                redisTemplate.delete(key[0]);
-            } else {
-                // 删除多个 Key，使用 Arrays.asList 确保类型为 List<String>
-                redisTemplate.delete(java.util.Arrays.asList(key));
+    public void del(String... keys) {
+        if (keys != null && keys.length > 0) {
+            try {
+                if (keys.length == 1) {
+                    redisTemplate.delete(keys[0]);
+                } else {
+                    redisTemplate.delete(Arrays.asList(keys));
+                }
+            } catch (Exception e) {
+                log.error("删除key失败 keys={}", Arrays.toString(keys), e);
             }
         }
     }
 
-    // ============================= String (字符串) =============================
+    // ============================= String =============================
 
-    /**
-     * 普通缓存获取
-     */
-    public Object get(String key) {
-        return key == null ? null : redisTemplate.opsForValue().get(key);
+    public <T> T get(String key) {
+        try {
+            return (T) redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            log.error("获取缓存失败 key={}", key, e);
+            return null;
+        }
     }
 
-    /**
-     * 普通缓存放入
-     */
     public boolean set(String key, Object value) {
         try {
             redisTemplate.opsForValue().set(key, value);
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("设置缓存失败 key={}", key, e);
             return false;
         }
     }
 
-    /**
-     * 普通缓存放入并设置时间
-     */
     public boolean set(String key, Object value, long time) {
         try {
             if (time > 0) {
@@ -97,106 +101,119 @@ public class RedisUtils {
             }
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("设置缓存失败 key={}", key, e);
             return false;
         }
     }
 
-    // ============================= Hash (哈希) =============================
+    // ============================= 自增/自减 =============================
 
-    /**
-     * HashGet
-     */
-    public Object hget(String key, String item) {
-        return redisTemplate.opsForHash().get(key, item);
+    public long incr(String key, long delta) {
+        if (delta < 0) throw new RuntimeException("递增因子必须大于0");
+        return redisTemplate.opsForValue().increment(key, delta);
     }
 
-    /**
-     * 获取hashKey对应的所有键值
-     */
+    public long decr(String key, long delta) {
+        if (delta < 0) throw new RuntimeException("递减因子必须大于0");
+        return redisTemplate.opsForValue().increment(key, -delta);
+    }
+
+    // ============================= Hash =============================
+
+    public <T> T hget(String key, String item) {
+        return (T) redisTemplate.opsForHash().get(key, item);
+    }
+
     public Map<Object, Object> hmget(String key) {
         return redisTemplate.opsForHash().entries(key);
     }
 
-    /**
-     * HashSet 并设置时间
-     */
     public boolean hmset(String key, Map<String, Object> map, long time) {
         try {
             redisTemplate.opsForHash().putAll(key, map);
-            if (time > 0) {
-                expire(key, time);
-            }
+            if (time > 0) expire(key, time);
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("hmset失败 key={}", key, e);
             return false;
         }
     }
 
-    /**
-     * 向一张hash表中放入数据,如果不存在将创建
-     */
     public boolean hset(String key, String item, Object value) {
         try {
             redisTemplate.opsForHash().put(key, item, value);
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("hset失败 key={}", key, e);
             return false;
         }
     }
 
-    // ============================= Set (集合) =============================
+    public void hdel(String key, Object... item) {
+        redisTemplate.opsForHash().delete(key, item);
+    }
 
-    /**
-     * 根据key获取Set中的所有值
-     */
+    // ============================= Set =============================
+
     public Set<Object> sGet(String key) {
-        try {
-            return redisTemplate.opsForSet().members(key);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return redisTemplate.opsForSet().members(key);
     }
 
-    /**
-     * 将数据放入set缓存
-     */
     public long sSet(String key, Object... values) {
-        try {
-            return redisTemplate.opsForSet().add(key, values);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return 0;
-        }
+        return redisTemplate.opsForSet().add(key, values);
     }
 
-    // ============================= List (列表) =============================
+    public boolean sHasKey(String key, Object value) {
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(key, value));
+    }
 
-    /**
-     * 获取list缓存的内容
-     */
+    // ============================= List =============================
+
     public List<Object> lGet(String key, long start, long end) {
-        try {
-            return redisTemplate.opsForList().range(key, start, end);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return redisTemplate.opsForList().range(key, start, end);
     }
 
-    /**
-     * 将数据放入list缓存 (尾部追加)
-     */
     public boolean lSet(String key, Object value) {
         try {
             redisTemplate.opsForList().rightPush(key, value);
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("lSet失败 key={}", key, e);
             return false;
+        }
+    }
+
+    public boolean lSet(String key, List<Object> values) {
+        try {
+            redisTemplate.opsForList().rightPushAll(key, values);
+            return true;
+        } catch (Exception e) {
+            log.error("批量lSet失败 key={}", key, e);
+            return false;
+        }
+    }
+
+    // ============================= 分布式锁（基础版） =============================
+
+    public boolean tryLock(String key, String value, long timeout) {
+        try {
+            return Boolean.TRUE.equals(
+                    redisTemplate.opsForValue().setIfAbsent(key, value, timeout, TimeUnit.SECONDS)
+            );
+        } catch (Exception e) {
+            log.error("加锁失败 key={}", key, e);
+            return false;
+        }
+    }
+
+    public void unlock(String key, String value) {
+        try {
+            Object current = redisTemplate.opsForValue().get(key);
+            if (value.equals(current)) {
+                redisTemplate.delete(key);
+            }
+        } catch (Exception e) {
+            log.error("释放锁失败 key={}", key, e);
         }
     }
 }

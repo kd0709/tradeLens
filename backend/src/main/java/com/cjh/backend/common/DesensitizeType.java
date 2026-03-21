@@ -1,4 +1,4 @@
-package com.cjh.backend.annotation;
+package com.cjh.backend.common;
 
 /**
  * 脱敏策略枚举

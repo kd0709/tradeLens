@@ -1,4 +1,4 @@
-package com.cjh.backend.common;
+package com.cjh.backend.annotation;
 
 import java.lang.annotation.*;
 

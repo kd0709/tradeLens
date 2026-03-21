@@ -2,7 +2,7 @@ package com.cjh.backend.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.cjh.backend.common.CurrentUser;
+import com.cjh.backend.annotation.CurrentUser;
 import com.cjh.backend.entity.Message;
 import com.cjh.backend.mapper.MessageMapper;
 import com.cjh.backend.service.UserService;

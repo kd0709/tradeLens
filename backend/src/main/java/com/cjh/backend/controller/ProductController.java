@@ -1,12 +1,11 @@
 package com.cjh.backend.controller;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cjh.backend.annotation.UserBehaviorTrack;
 import com.cjh.backend.dto.*;
 import com.cjh.backend.dto.Product.*;
 import com.cjh.backend.service.ProductService;
 import lombok.extern.slf4j.Slf4j;
-import com.cjh.backend.common.CurrentUser;
+import com.cjh.backend.annotation.CurrentUser;
 import com.cjh.backend.utils.Result;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

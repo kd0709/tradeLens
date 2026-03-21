@@ -1,6 +1,6 @@
 package com.cjh.backend.controller;
 
-import com.cjh.backend.common.CurrentUser;
+import com.cjh.backend.annotation.CurrentUser;
 import com.cjh.backend.dto.Address.AddressCreateDto;
 import com.cjh.backend.dto.Address.AddressListDto;
 import com.cjh.backend.dto.Address.AddressUpdateDto;

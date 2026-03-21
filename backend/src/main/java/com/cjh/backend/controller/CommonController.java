@@ -2,7 +2,7 @@ package com.cjh.backend.controller;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.cjh.backend.annotation.ApiLog;
-import com.cjh.backend.common.CurrentUser;
+import com.cjh.backend.annotation.CurrentUser;
 import com.cjh.backend.service.impl.AiRecognitionService;
 import com.cjh.backend.service.FileStorageService;
 import com.cjh.backend.utils.Result;

@@ -1,7 +1,7 @@
 package com.cjh.backend.aspect;
 
 import com.cjh.backend.annotation.DesensitizeField;
-import com.cjh.backend.annotation.DesensitizeType;
+import com.cjh.backend.common.DesensitizeType;
 import com.cjh.backend.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.AfterReturning;

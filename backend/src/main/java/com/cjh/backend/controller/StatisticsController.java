@@ -1,7 +1,7 @@
 package com.cjh.backend.controller;
 
 
-import com.cjh.backend.common.CurrentUser;
+import com.cjh.backend.annotation.CurrentUser;
 import com.cjh.backend.dto.data.SalesStatisticsDto;
 import com.cjh.backend.service.StatisticsService;
 import com.cjh.backend.utils.Result;
